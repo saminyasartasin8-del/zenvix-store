@@ -1,0 +1,16 @@
+ZENVIX Store — customer accounts and secure order access
+
+1) Extract the ZIP and run the site through VS Code Live Server. Do not open pages as file:// URLs.
+2) In Supabase Dashboard -> SQL Editor, run the updated SUPABASE_SETUP.sql. This is required before customer orders can be placed.
+3) In Supabase Authentication settings, enable email/password sign-up. Enable email confirmation for production.
+4) In Authentication -> URL Configuration, set Site URL to your deployed HTTPS website address and add its /account.html URL to the allowed redirect URLs. Add your local Live Server account URL while developing.
+5) Create the store owner's Auth user, copy its UUID, and run the final INSERT example in SUPABASE_SETUP.sql to grant admin access.
+6) Deploy all files together, including account.html, on one domain. Share the public index.html URL with customers. Keep admin.html private.
+
+Customers can browse without signing in. Buy Now and checkout require a customer account. Each order is linked to its signed-in user; customers can see only their own order history, while the admin can see and manage all orders. The account email is included with each order.
+
+Security notes:
+- Supabase Auth handles passwords; this site does not store customer passwords.
+- The updated SQL removes guest order inserts and applies row-level security to order ownership. Older guest orders with no owner remain visible only to admins.
+- Keep only the Supabase publishable key in app.js. Never place a service-role key in the website.
+- Confirm product price, stock, and delivery details before changing an order from Pending. Do not accept online payments until you add a server-side payment and order validation flow.
