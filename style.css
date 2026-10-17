@@ -342,3 +342,18 @@ body.zoom-open { overflow: hidden; }
   .category-cards span { display:none; }
   .deals .product-grid { gap:8px; }
 }
+
+/* Product details stay visible together; remove tab switching and the unused promo strip. */
+.top-strip { display: none !important; }
+.product-detail-tabs .detail-tab-buttons { display: none !important; }
+.product-detail-tabs .detail-tab-panel,
+.product-detail-tabs .detail-tab-panel.hidden { display: block !important; }
+.product-detail-tabs .detail-tab-panel + .detail-tab-panel { border-top: 1px solid var(--line); }
+
+@media (max-width: 650px) {
+  .product-detail-tabs { margin-top: 14px; border-radius: 12px; }
+  .product-detail-tabs .detail-tab-panel { min-height: 0; padding: 16px; }
+  .product-detail-tabs .detail-tab-panel h2 { font-size: 17px; margin-bottom: 9px; }
+  .product-detail-tabs .detail-tab-panel p,
+  .product-detail-tabs .detail-tab-panel li { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+}
