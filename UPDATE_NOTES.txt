@@ -1,0 +1,4 @@
+ZENVIX V9 - merged full site package
+Includes V3 base files with V4-V8 incremental updates applied.
+This package also centers the brand/logo block in the footer on mobile screens.
+Deployment update: replace the files in the repository with the contents of this folder, then commit once.

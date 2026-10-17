@@ -357,3 +357,11 @@ body.zoom-open { overflow: hidden; }
   .product-detail-tabs .detail-tab-panel p,
   .product-detail-tabs .detail-tab-panel li { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
 }
+
+/* Center the brand block in the mobile footer. */
+@media (max-width: 600px) {
+  .footer-grid > div:first-child { grid-column: 1 / -1; text-align: center; }
+  .footer-grid > div:first-child .brand { justify-content: center; }
+  .footer-grid > div:first-child > p { max-width: 320px; margin: 12px auto 0; }
+}
+
