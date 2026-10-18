@@ -1,4 +1,4 @@
-ZENVIX V10 - complete merged site package
-Includes V3 base files and incremental changes through V8.
-Mobile footer brand is left-aligned again. On mobile, the orange Store label sits below ZENVIX and the TECH/GAMING/ACCESSORIES tagline is hidden.
-Other pages and Supabase configuration were retained from V9.
+ZENVIX V13 - full site package
+Adds admin logo image upload in Admin > Storefront.
+Accepts PNG, JPG, and WebP images up to 5 MB. Uses the existing public product-images storage bucket; no new SQL or bucket is required.
+The selected image is uploaded when storefront settings are saved. The text logo remains available, and the admin can switch back to it.

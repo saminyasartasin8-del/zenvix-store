@@ -368,3 +368,39 @@ body.zoom-open { overflow: hidden; }
   .footer-grid > div:first-child { text-align: left; }
   .footer-grid > div:first-child .brand { justify-content: flex-start; }
 }
+
+/* Brand lockup: keep Store on its own orange line and center the Z in its tile. */
+.brand > span:last-child { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.brand > span:last-child > b { display: block; color: var(--orange); }
+.tl-logo { display: grid; place-items: center; flex: 0 0 40px; overflow: hidden; color: #fff !important; letter-spacing: 0; line-height: 1; text-align: center; }
+.footer-grid .tl-logo { align-self: center; }
+@media (max-width: 650px) {
+  .tl-logo { flex-basis: 38px; }
+  .footer-grid > div:first-child { text-align: left; }
+  .footer-grid > div:first-child .brand { justify-content: flex-start; }
+  .brand small { display: none; }
+}
+
+/* Explicit brand layout for desktop and mobile. */
+.brand { display: flex; flex-direction: row !important; align-items: center !important; }
+.brand .brand-text { display: flex !important; flex-direction: column !important; align-items: flex-start !important; line-height: 1.05; white-space: nowrap; }
+.brand .brand-name { display: block; }
+.brand .brand-text > b { display: block; color: var(--orange); }
+.brand .tl-logo { display: flex !important; align-items: center !important; justify-content: center !important; flex: 0 0 40px !important; width: 40px; height: 40px; padding: 0; overflow: hidden; color: #fff !important; font-size: 14px; font-weight: 1000; letter-spacing: 0; line-height: 1; text-align: center; }
+.footer-grid > div:first-child > .brand { flex-direction: row !important; justify-content: flex-start !important; align-items: center !important; }
+.footer-grid > div:first-child > .brand .tl-logo { flex-basis: 40px !important; }
+@media (max-width: 650px) {
+  .brand .tl-logo { flex-basis: 38px !important; width: 38px; height: 38px; }
+  .brand .brand-text > small { display: none; }
+  .footer-grid > div:first-child { text-align: left; }
+  .footer-grid > div:first-child > .brand { justify-content: flex-start !important; }
+}
+
+/* Admin logo image upload preview and responsive logo rendering. */
+.tl-logo.has-image { background: #fff; }
+.tl-logo img { display: block; width: 100%; height: 100%; padding: 2px; object-fit: contain; border-radius: inherit; }
+.store-logo-preview { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.store-logo-preview img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.store-logo-preview .tl-logo { width: 56px; height: 56px; }
+.logo-reset-option { display: flex !important; flex-direction: row !important; align-items: center; gap: 9px !important; }
+.logo-reset-option input { width: auto !important; }
