@@ -1,4 +1,3 @@
-ZENVIX V14 - full merged site package
-Includes admin logo image upload from V13.
-Removes the redundant Contact footer column. Phone and support email appear under Customer Care; support email also appears under Stay connected with Facebook and Instagram.
-Return policy links open a dedicated page with the existing 7-day delivery and return-shipping-charge note.
+V15 update
+- Fixed the product page Products navigation and breadcrumb links to open All Products.
+- Added mobile pinch zoom and drag-to-pan for product images; kept swipe between images and the + / - controls.

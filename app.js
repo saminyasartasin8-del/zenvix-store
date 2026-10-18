@@ -319,6 +319,34 @@ async function renderDetail(){
 
   let activeImageIndex = 0;
   let zoomScale = 1;
+  let panX = 0;
+  let panY = 0;
+  const zoomStage = document.getElementById("zoomStage");
+  const zoomPointers = new Map();
+  let dragStart = null;
+  let pinchStart = null;
+  let swipeStart = null;
+
+  const clampPan = () => {
+    const stageRect = zoomStage.getBoundingClientRect();
+    const naturalWidth = zoomImg.naturalWidth || stageRect.width;
+    const naturalHeight = zoomImg.naturalHeight || stageRect.height;
+    const fit = Math.min(stageRect.width / naturalWidth, stageRect.height / naturalHeight);
+    const maxX = Math.max(0, (naturalWidth * fit * zoomScale - stageRect.width) / 2);
+    const maxY = Math.max(0, (naturalHeight * fit * zoomScale - stageRect.height) / 2);
+    panX = Math.max(-maxX, Math.min(maxX, panX));
+    panY = Math.max(-maxY, Math.min(maxY, panY));
+  };
+
+  const applyZoomTransform = () => {
+    clampPan();
+    zoomImg.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${zoomScale})`;
+    document.getElementById("zoomLevel").textContent = `${Math.round(zoomScale * 100)}%`;
+    zoomStage.classList.toggle("zoomed", zoomScale > 1);
+  };
+
+  const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const pointerMidpoint = (a, b) => ({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 
   const setProductImage = (index) => {
     activeImageIndex = (index + imageList.length) % imageList.length;
@@ -331,8 +359,9 @@ async function renderDetail(){
     });
 
     zoomScale = 1;
-    zoomImg.style.transform = "scale(1)";
-    document.getElementById("zoomLevel").textContent = "100%";
+    panX = 0;
+    panY = 0;
+    applyZoomTransform();
   };
 
   document.querySelectorAll(".product-thumb").forEach(button => {
@@ -369,28 +398,75 @@ async function renderDetail(){
   });
 
   const applyZoom = (delta) => {
-    zoomScale = Math.max(1, Math.min(3, zoomScale + delta));
-    zoomImg.style.transform = `scale(${zoomScale})`;
-    document.getElementById("zoomLevel").textContent = `${Math.round(zoomScale * 100)}%`;
+    zoomScale = Math.max(1, Math.min(4, zoomScale + delta));
+    if (zoomScale === 1) { panX = 0; panY = 0; }
+    applyZoomTransform();
   };
 
   document.getElementById("zoomIn").addEventListener("click", () => applyZoom(0.25));
   document.getElementById("zoomOut").addEventListener("click", () => applyZoom(-0.25));
 
-  let touchStartX = 0;
-  const zoomStage = document.getElementById("zoomStage");
-
-  zoomStage.addEventListener("touchstart", event => {
-    touchStartX = event.changedTouches[0].clientX;
-  }, { passive: true });
-
-  zoomStage.addEventListener("touchend", event => {
-    const deltaX = event.changedTouches[0].clientX - touchStartX;
-
-    if (Math.abs(deltaX) > 55) {
-      setProductImage(activeImageIndex + (deltaX < 0 ? 1 : -1));
+  zoomStage.addEventListener("pointerdown", event => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    zoomStage.setPointerCapture(event.pointerId);
+    zoomPointers.set(event.pointerId, {x:event.clientX,y:event.clientY});
+    if (zoomPointers.size === 1) {
+      dragStart = {x:event.clientX,y:event.clientY,panX,panY};
+      swipeStart = {x:event.clientX,y:event.clientY,zoomed:zoomScale>1};
+    } else if (zoomPointers.size === 2) {
+      const [a,b] = [...zoomPointers.values()];
+      const midpoint = pointerMidpoint(a,b);
+      pinchStart = {distance:pointerDistance(a,b),scale:zoomScale,panX,panY,midpoint};
+      dragStart = null;
+      swipeStart = null;
     }
-  }, { passive: true });
+  });
+
+  zoomStage.addEventListener("pointermove", event => {
+    if (!zoomPointers.has(event.pointerId)) return;
+    event.preventDefault();
+    zoomPointers.set(event.pointerId, {x:event.clientX,y:event.clientY});
+    if (zoomPointers.size >= 2 && pinchStart) {
+      const [a,b] = [...zoomPointers.values()];
+      const midpoint = pointerMidpoint(a,b);
+      const rect = zoomStage.getBoundingClientRect();
+      const ratio = pointerDistance(a,b) / Math.max(1,pinchStart.distance);
+      zoomScale = Math.max(1,Math.min(4,pinchStart.scale*ratio));
+      const localX = (pinchStart.midpoint.x - rect.left - rect.width/2 - pinchStart.panX) / pinchStart.scale;
+      const localY = (pinchStart.midpoint.y - rect.top - rect.height/2 - pinchStart.panY) / pinchStart.scale;
+      panX = midpoint.x - rect.left - rect.width/2 - localX*zoomScale;
+      panY = midpoint.y - rect.top - rect.height/2 - localY*zoomScale;
+      if (zoomScale === 1) { panX=0; panY=0; }
+      applyZoomTransform();
+    } else if (zoomPointers.size === 1 && zoomScale > 1 && dragStart) {
+      panX = dragStart.panX + event.clientX - dragStart.x;
+      panY = dragStart.panY + event.clientY - dragStart.y;
+      applyZoomTransform();
+    }
+  });
+
+  const finishZoomPointer = event => {
+    const wasSinglePointer = zoomPointers.size === 1;
+    const start = swipeStart;
+    const endX = event.clientX;
+    zoomPointers.delete(event.pointerId);
+    if (wasSinglePointer && start && !start.zoomed && zoomScale === 1 && Math.abs(endX-start.x)>55) {
+      setProductImage(activeImageIndex + (endX < start.x ? 1 : -1));
+    }
+    if (zoomPointers.size >= 2) {
+      const [a,b] = [...zoomPointers.values()];
+      const midpoint=pointerMidpoint(a,b);
+      pinchStart={distance:pointerDistance(a,b),scale:zoomScale,panX,panY,midpoint};
+    } else {
+      pinchStart=null;
+      const remaining=[...zoomPointers.values()][0];
+      dragStart=remaining?{x:remaining.x,y:remaining.y,panX,panY}:null;
+      swipeStart=remaining?{x:remaining.x,y:remaining.y,zoomed:zoomScale>1}:null;
+    }
+  };
+  zoomStage.addEventListener("pointerup", finishZoomPointer);
+  zoomStage.addEventListener("pointercancel", finishZoomPointer);
 
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") closeZoom();
