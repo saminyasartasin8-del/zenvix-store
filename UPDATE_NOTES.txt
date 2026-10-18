@@ -1,4 +1,7 @@
-V16 update
-- Customer Care now displays only the support email, phone number, and Return Policy, in that order.
-- Removed Cart and Checkout from Customer Care and removed the duplicate email from Stay Connected.
-- On mobile, Stay Connected appears directly below Shop, followed by Customer Care.
+V18 update
+- Supabase setup now creates/upgrades the products and product_images tables and sets public read/admin-only write access.
+- Product image storage policies are made admin-only for uploads, updates, and removals.
+- Admin product loading now shows a clear database error instead of silently displaying zero.
+- Editing a product preserves its current image gallery unless replacement photos or the remove option are selected; replaced/deleted product image files are cleaned up when possible.
+- Delivered and cancelled orders can be archived from the active admin order list and restored later. Archiving preserves the order row and customer order history.
+- Supabase setup adds the archived_at column safely to existing order tables without deleting order data.

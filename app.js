@@ -14,6 +14,7 @@ ear:"https://www.e-shop.gr/images/TEL/ART2/TEL.231240_5.jpg"
 const STORE_DEFAULTS={name:"ZENVIX Store",tagline:"TECH • GAMING • ACCESSORIES",phone:"+880 1XXXXXXXXX",email:"",topMessage:"🚚 Nationwide delivery • Cash on Delivery • Easy order tracking",heroTitle:"Tech that fits your life & game.",heroText:"Premium electronics, gaming gear and everyday accessories — with Bangladesh-friendly prices and convenient delivery.",promoLabel:"LIMITED OFFERS",promoTitle:"Deals of the day",promoEnabled:true,deliveryInfo:"ডেলিভারি ৭ দিনের মধ্যে আপনার হাতে পৌঁছে যাবে।\nপণ্য ফেরত দিতে চাইলে ফেরত পাঠানোর ডেলিভারি চার্জ কাস্টমারকে দিতে হবে।",storeAbout:"Your new destination for electronics, accessories and gaming gear.",shopTitle:"Shop",shopLinks:"All Products | products.html\nGaming | products.html?cat=Gaming\nAudio | products.html?cat=Headphones",supportTitle:"Customer Care",supportLinks:"Return policy | return-policy.html",contactTitle:"Contact",address:"Online electronics store • Bangladesh\nBangladesh",socialTitle:"Stay connected",socialLinks:"Facebook | #\nInstagram | #",footerNote:"© 2026 ZENVIX."};
 STORE_DEFAULTS.logoText="Z";
 let storeSettings={...STORE_DEFAULTS};
+let productsLoadError=null;
 async function loadStoreSettings(){const {data,error}=await supabaseClient.from("zenvix_store_settings").select("settings").eq("id",1).maybeSingle();if(!error&&data?.settings)storeSettings={...STORE_DEFAULTS,...data.settings};applyStoreSettings();return storeSettings}
 async function uploadStoreLogo(file){if(!file)return "";if(!["image/png","image/jpeg","image/webp"].includes(file.type))throw new Error("Choose a PNG, JPG, or WebP image.");if(file.size>5*1024*1024)throw new Error("Logo image must be 5 MB or smaller.");const ext={"image/png":"png","image/jpeg":"jpg","image/webp":"webp"}[file.type];const token=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;const path=`store-logos/${token}.${ext}`;const {error}=await supabaseClient.storage.from("product-images").upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;const {data}=supabaseClient.storage.from("product-images").getPublicUrl(path);if(!data?.publicUrl)throw new Error("Could not get a public URL for the uploaded logo.");return data.publicUrl}
 async function saveStoreSettings(settings){const next={...STORE_DEFAULTS,...settings};const {error}=await supabaseClient.from("zenvix_store_settings").upsert({id:1,settings:next,updated_at:new Date().toISOString()});if(error)throw error;storeSettings=next;applyStoreSettings()}
@@ -77,8 +78,10 @@ async function getProducts(){
 
   if(error){
     console.error("Supabase products error:", error);
+    productsLoadError=error;
     return [];
   }
+  productsLoadError=null;
 
   const products = (data || []).map(p => ({
     ...p,
@@ -108,9 +111,9 @@ function saveCart(c){localStorage.setItem("se_cart",JSON.stringify(c));updateCar
 // Orders and delivery settings use Supabase so customers/admins share the same data.
 function getLocalOrders(){try{return JSON.parse(localStorage.getItem("se_orders")||"[]")}catch{return []}}
 async function getOrders(){
-  const {data,error}=await supabaseClient.from("zenvix_orders").select("order_number,order_data,status,created_at").order("created_at",{ascending:false});
+  const {data,error}=await supabaseClient.from("zenvix_orders").select("order_number,order_data,status,created_at,archived_at").order("created_at",{ascending:false});
   if(error){console.error("Load orders failed:",error);return getLocalOrders();}
-  return (data||[]).map(row=>({...row.order_data,id:row.order_number,status:row.status||row.order_data?.status||"Pending",date:row.order_data?.date||row.created_at}));
+  return (data||[]).map(row=>({...row.order_data,id:row.order_number,status:row.status||row.order_data?.status||"Pending",date:row.order_data?.date||row.created_at,archivedAt:row.archived_at||null}));
 }
 async function saveOrder(order){
   const {error}=await supabaseClient.from("zenvix_orders").insert({order_number:order.id,user_id:order.user_id,order_data:order,status:order.status||"Pending"});
@@ -119,6 +122,10 @@ async function saveOrder(order){
 async function saveOrderStatus(id,status){
   const {error}=await supabaseClient.from("zenvix_orders").update({status}).eq("order_number",id);
   if(error){console.error("Update order status failed:",error);throw error;}
+}
+async function saveOrderArchive(id,archived){
+  const {error}=await supabaseClient.from("zenvix_orders").update({archived_at:archived?new Date().toISOString():null}).eq("order_number",id);
+  if(error){console.error("Archive order failed:",error);throw error;}
 }
 function updateCartCount(){document.querySelectorAll("#cartCount").forEach(e=>e.textContent=getCart().reduce((s,x)=>s+x.qty,0))}
 function addToCart(id,qty=1){
@@ -706,25 +713,27 @@ async function initAdmin(){
 async function renderAdmin(){
   let p = await getProducts();
   let o = await getOrders();
+  const activeOrders = o.filter(x => !x.archivedAt);
+  const archivedOrders = o.filter(x => !!x.archivedAt);
 
-  let revenue = o
+  let revenue = activeOrders
     .filter(x => x.status !== "Cancelled")
     .reduce((s, x) => s + x.total, 0);
 
   document.getElementById("dashboardCards").innerHTML = `
     <div class="dash-card">
       <span>Products</span>
-      <b>${p.length}</b>
+      <b>${productsLoadError ? "Unavailable" : p.length}</b>
     </div>
 
     <div class="dash-card">
       <span>Orders</span>
-      <b>${o.length}</b>
+      <b>${activeOrders.length}</b>
     </div>
 
     <div class="dash-card">
       <span>Pending</span>
-      <b>${o.filter(x => x.status === "Pending").length}</b>
+      <b>${activeOrders.filter(x => x.status === "Pending").length}</b>
     </div>
 
     <div class="dash-card">
@@ -735,6 +744,7 @@ async function renderAdmin(){
 
   document.getElementById("tab-overview").innerHTML = `
     <h2>Quick overview</h2>
+    ${productsLoadError ? `<p role="alert" style="color:#b42318">Products could not load from Supabase. Check that the product tables and access policies are set up.</p>` : ""}
     <p style="color:#667085">
       Products are loaded from Supabase.
     </p>
@@ -747,13 +757,14 @@ async function renderAdmin(){
 
       <div class="trust-item">
         <b>Orders</b>
-        <span>${o.length} saved orders</span>
+        <span>${activeOrders.length} active · ${archivedOrders.length} archived</span>
       </div>
     </div>
   `;
 
   document.getElementById("tab-products").innerHTML = `
     <h2>Product management</h2>
+    ${productsLoadError ? `<p role="alert" style="color:#b42318">Products could not load from Supabase. Check the setup SQL and access policies before adding products.</p>` : ""}
 
     <form class="admin-form" id="productForm"><input type="hidden" name="productId"><h3 id="productFormTitle" class="wide">Add a product</h3>
 
@@ -806,14 +817,10 @@ async function renderAdmin(){
         placeholder="Image URL"
       >
       
-<label>Upload Product Images (একাধিক ছবি নির্বাচন করতে পারবে)</label>
-<input
-  type="file"
-  name="images"
-  class="wide"
-  accept="image/*"
-  multiple
->
+<label class="wide">Upload Product Images (একাধিক ছবি নির্বাচন করতে পারবে)
+  <input type="file" name="images" accept="image/*" multiple>
+</label>
+<label id="removeImagesLabel" class="wide" hidden><input type="checkbox" name="removeImages"> Remove current product photos</label>
 
 
       <input
@@ -941,6 +948,28 @@ const features = String(form.get("features") || "").trim();
     
 const imageFiles = Array.from(form.getAll("images"))
   .filter(file => file instanceof File && file.size > 0);
+const removeCurrentImages = form.get("removeImages") === "on";
+const replaceImages = Boolean(productId && (imageUrl || imageFiles.length || removeCurrentImages));
+
+// On edit, preserve the current gallery unless the admin changes the photos.
+if (replaceImages) {
+  const {data: oldImages, error: oldImageReadError}=await supabaseClient.from("product_images").select("url").eq("product_id", inserted.id);
+  if (oldImageReadError) {
+    console.error("Could not read current product images:", oldImageReadError);
+    showToast("Product details saved, but current photos could not be changed.");
+    await renderAdmin();
+    return;
+  }
+  const {error: clearImagesError}=await supabaseClient.from("product_images").delete().eq("product_id", inserted.id);
+  if (clearImagesError) {
+    console.error("Could not replace existing product image records:", clearImagesError);
+    showToast("Product details saved, but existing photos could not be updated.");
+    await renderAdmin();
+    return;
+  }
+  const oldImagePaths=(oldImages||[]).map(row=>productStoragePath(row.url,inserted.id)).filter(Boolean);
+  if(oldImagePaths.length){const {error:removeError}=await supabaseClient.storage.from("product-images").remove(oldImagePaths);if(removeError)console.error("Could not remove old image files:",removeError)}
+}
 
 const imageRows = [];
 
@@ -984,7 +1013,7 @@ for (const file of imageFiles) {
 }
 
 // সব ছবির URL product_images টেবিলে সেভ করবে
-if (imageRows.length > 0) {
+if (imageRows.length > 0 && (!productId || replaceImages)) {
   const { error: imageError } = await supabaseClient
     .from("product_images")
     .insert(imageRows);
@@ -1002,8 +1031,12 @@ if (imageRows.length > 0) {
 
   document.getElementById("tab-orders").innerHTML = `
     <h2>Order management</h2>
-
-    <div style="overflow:auto">
+    <p>Delivered or cancelled orders can be archived after you no longer need them in the active list. Archiving keeps the order and customer history; you can restore it later.</p>
+    <div class="admin-tabs order-view-tabs" role="tablist" aria-label="Order lists">
+      <button type="button" class="active" data-order-view="active" onclick="showOrderView('active')">Active orders (${activeOrders.length})</button>
+      <button type="button" data-order-view="archived" onclick="showOrderView('archived')">Archived (${archivedOrders.length})</button>
+    </div>
+    <div id="activeOrdersView" style="overflow:auto">
 
       <table class="admin-table">
 
@@ -1021,8 +1054,8 @@ if (imageRows.length > 0) {
         <tbody>
 
           ${
-            o.length
-              ? o.map(x => `
+            activeOrders.length
+              ? activeOrders.map(x => `
                 <tr>
 
                   <td>
@@ -1071,6 +1104,7 @@ if (imageRows.length > 0) {
                       </option>
 
                     </select>
+                    ${["Delivered","Cancelled"].includes(x.status) ? `<button class="btn light-btn" type="button" onclick="setOrderArchived('${x.id}',true)">Archive</button>` : ""}
                   </td>
 
                 </tr>
@@ -1086,6 +1120,12 @@ if (imageRows.length > 0) {
 
       </table>
 
+    </div>
+    <div id="archivedOrdersView" style="overflow:auto;display:none">
+      <table class="admin-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${archivedOrders.length ? archivedOrders.map(x => `<tr><td><b>${escapeHtml(x.id)}</b><br><small>${escapeHtml(x.date||"")}</small></td><td>${escapeHtml(x.customer||"")}<br><small>${escapeHtml(x.email||"")}</small><br>${escapeHtml(x.district||"")}</td><td>${escapeHtml(x.phone||"")}</td><td><b>${money(x.total)}</b></td><td><span class="status ${escapeHtml(x.status.toLowerCase())}">${escapeHtml(x.status)}</span></td><td><button class="btn light-btn" type="button" onclick="setOrderArchived('${x.id}',false)">Restore</button></td></tr>`).join("") : `<tr><td colspan="6">No archived orders.</td></tr>`}</tbody>
+      </table>
     </div>
   `;
 
@@ -1140,20 +1180,38 @@ if (imageRows.length > 0) {
   };
 }
 
-function resetProductForm(){const f=document.getElementById("productForm");if(!f)return;f.reset();f.elements.productId.value="";document.getElementById("productFormTitle").textContent="Add a product";f.querySelector('button[type="submit"]').textContent="Add product";document.getElementById("cancelProductEdit").hidden=true}
-function editProduct(id){const p=(window.adminProducts||[]).find(x=>String(x.id)===String(id));if(!p)return;const f=document.getElementById("productForm");f.elements.productId.value=p.id;f.elements.name.value=p.name||"";f.elements.brand.value=p.brand||"";f.elements.cat.value=p.cat||"Other";f.elements.price.value=p.price||"";f.elements.old.value=p.old||"";f.elements.stock.value=p.stock||0;f.elements.img.value=p.img||"";f.elements.badge.value=p.badge||"";f.elements.featured.value=String(!!p.featured);f.elements.description.value=p.description||p.desc||"";f.elements.specifications.value=p.specifications||"";f.elements.features.value=p.features||"";document.getElementById("productFormTitle").textContent="Edit product";f.querySelector('button[type="submit"]').textContent="Save changes";document.getElementById("cancelProductEdit").hidden=false;f.scrollIntoView({behavior:"smooth",block:"center"})}
+function resetProductForm(){const f=document.getElementById("productForm");if(!f)return;f.reset();f.elements.productId.value="";f.elements.img.placeholder="Image URL";document.getElementById("productFormTitle").textContent="Add a product";f.querySelector('button[type="submit"]').textContent="Add product";document.getElementById("cancelProductEdit").hidden=true;document.getElementById("removeImagesLabel").hidden=true}
+function editProduct(id){const p=(window.adminProducts||[]).find(x=>String(x.id)===String(id));if(!p)return;const f=document.getElementById("productForm");f.elements.productId.value=p.id;f.elements.name.value=p.name||"";f.elements.brand.value=p.brand||"";f.elements.cat.value=p.cat||"Other";f.elements.price.value=p.price||"";f.elements.old.value=p.old||"";f.elements.stock.value=p.stock||0;f.elements.img.value="";f.elements.img.placeholder="Leave blank to keep existing photos";f.elements.badge.value=p.badge||"";f.elements.featured.value=String(!!p.featured);f.elements.description.value=p.description||p.desc||"";f.elements.specifications.value=p.specifications||"";f.elements.features.value=p.features||"";document.getElementById("removeImagesLabel").hidden=!(p.images?.length||p.img);document.getElementById("productFormTitle").textContent="Edit product";f.querySelector('button[type="submit"]').textContent="Save changes";document.getElementById("cancelProductEdit").hidden=false;f.scrollIntoView({behavior:"smooth",block:"center"})}
+function productStoragePath(url,productId){try{const parsed=new URL(url);const marker="/storage/v1/object/public/product-images/";const index=parsed.pathname.indexOf(marker);if(index<0)return null;const path=decodeURIComponent(parsed.pathname.slice(index+marker.length));return path.startsWith(`${productId}/`)?path:null}catch{return null}}
 async function deleteProduct(id) {
   if (!confirm("Delete this product?")) return;
+  const {data:images,error:imageReadError}=await supabaseClient.from("product_images").select("url").eq("product_id",id);
+  if(imageReadError){showToast("Could not load product images before deletion.");return}
+  const {error:imageDeleteError}=await supabaseClient.from("product_images").delete().eq("product_id",id);
+  if(imageDeleteError){showToast("Could not delete the product image records.");return}
   const { error } = await supabaseClient.from("products").delete().eq("id", id);
   if (error) {
     console.error("Delete product error:", error);
     showToast("Could not delete product. Check Supabase permissions.");
     return;
   }
+  const paths=(images||[]).map(row=>productStoragePath(row.url,id)).filter(Boolean);
+  if(paths.length){const {error:removeError}=await supabaseClient.storage.from("product-images").remove(paths);if(removeError)console.error("Product image file cleanup failed:",removeError)}
   showToast("Product deleted ✓");
   await renderAdmin();
 }
 async function setOrderStatus(id,status){try{await saveOrderStatus(id,status);await renderAdmin();showToast("Order status updated ✓")}catch(error){showToast("Could not update order status. Check permissions.")}}
+function showOrderView(view){
+  const active=document.getElementById("activeOrdersView"), archived=document.getElementById("archivedOrdersView");
+  if(!active||!archived)return;
+  active.style.display=view==="active"?"":"none";
+  archived.style.display=view==="archived"?"":"none";
+  document.querySelectorAll("[data-order-view]").forEach(button=>button.classList.toggle("active",button.dataset.orderView===view));
+}
+async function setOrderArchived(id,archived){
+  try{await saveOrderArchive(id,archived);await renderAdmin();showOrderView(archived?"active":"archived");showToast(archived?"Order archived ✓":"Order restored ✓")}
+  catch(error){showToast("Could not update the order. Check Supabase permissions and setup SQL.")}
+}
 console.log("Supabase loaded:", !!supabaseClient);
 console.log("Supabase URL:", SUPABASE_URL);
 console.log("ZENVIX Supabase connection ready");
