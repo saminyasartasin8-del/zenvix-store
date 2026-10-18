@@ -404,3 +404,16 @@ body.zoom-open { overflow: hidden; }
 .store-logo-preview .tl-logo { width: 56px; height: 56px; }
 .logo-reset-option { display: flex !important; flex-direction: row !important; align-items: center; gap: 9px !important; }
 .logo-reset-option input { width: auto !important; }
+
+/* Streamlined footer: Shop, Customer Care, and Stay connected. */
+.footer-grid { grid-template-columns: 2fr repeat(3, 1fr); }
+.footer-grid > div:first-child > .brand { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 10px; }
+.footer-grid > div:first-child > .brand .brand-text { display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+.footer-contact { margin-top: 10px; }
+.footer-contact a { display: block; color: #9eabb8; font-size: 13px; margin: 10px 0; overflow-wrap: anywhere; }
+@media (max-width: 950px) { .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .footer-grid > div:first-child { grid-column: 1 / -1; }
+  .footer-grid > div:first-child > .brand { flex-direction: row !important; }
+}

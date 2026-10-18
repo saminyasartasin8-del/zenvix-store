@@ -1,4 +1,4 @@
-ZENVIX V13 - full site package
-Adds admin logo image upload in Admin > Storefront.
-Accepts PNG, JPG, and WebP images up to 5 MB. Uses the existing public product-images storage bucket; no new SQL or bucket is required.
-The selected image is uploaded when storefront settings are saved. The text logo remains available, and the admin can switch back to it.
+ZENVIX V14 - full merged site package
+Includes admin logo image upload from V13.
+Removes the redundant Contact footer column. Phone and support email appear under Customer Care; support email also appears under Stay connected with Facebook and Instagram.
+Return policy links open a dedicated page with the existing 7-day delivery and return-shipping-charge note.
