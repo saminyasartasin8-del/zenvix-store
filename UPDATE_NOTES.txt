@@ -1,3 +1,4 @@
-V15 update
-- Fixed the product page Products navigation and breadcrumb links to open All Products.
-- Added mobile pinch zoom and drag-to-pan for product images; kept swipe between images and the + / - controls.
+V16 update
+- Customer Care now displays only the support email, phone number, and Return Policy, in that order.
+- Removed Cart and Checkout from Customer Care and removed the duplicate email from Stay Connected.
+- On mobile, Stay Connected appears directly below Shop, followed by Customer Care.
