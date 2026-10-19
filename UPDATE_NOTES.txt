@@ -1,4 +1,4 @@
-V19 update
+V20 update
 - Supabase setup now creates/upgrades the products and product_images tables and sets public read/admin-only write access.
 - Product image storage policies are made admin-only for uploads, updates, and removals.
 - Admin product loading now shows a clear database error instead of silently displaying zero.
@@ -7,3 +7,5 @@ V19 update
 - Supabase setup adds the archived_at column safely to existing order tables without deleting order data.
 
 - The Orders tab opens on active orders; the header Archive shortcut opens the archived list.
+
+- The dashboard Archive shortcut no longer displays an archived-order count.

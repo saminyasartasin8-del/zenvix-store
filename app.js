@@ -699,7 +699,7 @@ async function initAdmin(){
   const {data:adminRow,error:adminError}=await supabaseClient.from("zenvix_admin_users").select("user_id").eq("user_id",session.user.id).maybeSingle();
   if(adminError||!adminRow){document.querySelector(".admin-page").innerHTML='<div class="empty"><h2>Admin access not enabled</h2><p>This signed-in account does not have admin access.</p><a class="btn orange" href="index.html">Back to store</a></div>';return;}
   const header=document.querySelector(".admin-top");
-  if(header){const actions=document.createElement("div");actions.className="admin-top-actions";const archive=document.createElement("button");archive.className="archive-shortcut";archive.type="button";archive.title="Open archived orders";archive.setAttribute("aria-label","Open archived orders");archive.innerHTML='<span aria-hidden="true">▤</span><span>Archive</span><b id="archivedOrderCount">0</b>';archive.onclick=openArchivedOrders;const logout=document.createElement("button");logout.className="btn light-btn";logout.textContent="Sign out";logout.onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};actions.append(archive,logout);header.appendChild(actions);}
+  if(header){const actions=document.createElement("div");actions.className="admin-top-actions";const archive=document.createElement("button");archive.className="archive-shortcut";archive.type="button";archive.title="Open archived orders";archive.setAttribute("aria-label","Open archived orders");archive.innerHTML='<span aria-hidden="true">▤</span><span>Archive</span>';archive.onclick=openArchivedOrders;const logout=document.createElement("button");logout.className="btn light-btn";logout.textContent="Sign out";logout.onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};actions.append(archive,logout);header.appendChild(actions);}
   await renderAdmin();
   document.querySelectorAll(".admin-tabs button").forEach(button => {
     button.onclick = () => {
@@ -716,8 +716,6 @@ async function renderAdmin(){
   let o = await getOrders();
   const activeOrders = o.filter(x => !x.archivedAt);
   const archivedOrders = o.filter(x => !!x.archivedAt);
-  const archivedCount=document.getElementById("archivedOrderCount");
-  if(archivedCount)archivedCount.textContent=archivedOrders.length;
 
   let revenue = activeOrders
     .filter(x => x.status !== "Cancelled")
