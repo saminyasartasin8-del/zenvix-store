@@ -22,7 +22,7 @@
 
 - `SUPABASE_SETUP.sql` creates or upgrades the Supabase `products` and `product_images` tables and applies public-read/admin-write policies without deleting existing product rows.
 - Customer orders are inserted into `zenvix_orders` in Supabase. Admin users granted in `zenvix_admin_users` can view orders and update their status.
-- Admins can archive Delivered or Cancelled orders to hide them from the active order list. Archived orders remain saved, stay in the customer's order history, and can be restored from Admin → Orders → Archived. Run this ZIP's `SUPABASE_SETUP.sql` before using this feature; it adds `archived_at` without deleting existing orders.
+- Admins can archive Delivered or Cancelled orders to hide them from the active order list. Archived orders remain saved, stay in the customer's order history, and can be restored from the Archive shortcut in the Admin dashboard header. Run this ZIP's `SUPABASE_SETUP.sql` before using this feature; it adds `archived_at` without deleting existing orders.
 - Delivery settings are stored in `zenvix_delivery_settings`; checkout on other devices reads the same shared settings.
 - Store name, contact details, homepage copy, promotion visibility, and footer content/links are stored in `zenvix_store_settings` and can be changed from Admin → Storefront. Click a storefront preview card to jump to its related editor field.
 - Admin → Products lets you add, edit, and delete products. When editing, current photos stay unless you add replacement photos or select “Remove current product photos.”
@@ -47,3 +47,4 @@ Checkout applies an exact area override first, then the Dhaka city rate, then th
 4. Customers can browse without signing in. Buy Now and checkout require an account. Their signed-in email is attached to each order, and account pages show only their own order history. Admins continue to see and manage orders in `admin.html`.
 
 Supabase Auth stores the password; this website never saves or reads a customer's password. Keep using only the Supabase publishable key in the browser. Never add a service-role key to this project.
+

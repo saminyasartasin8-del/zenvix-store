@@ -699,7 +699,7 @@ async function initAdmin(){
   const {data:adminRow,error:adminError}=await supabaseClient.from("zenvix_admin_users").select("user_id").eq("user_id",session.user.id).maybeSingle();
   if(adminError||!adminRow){document.querySelector(".admin-page").innerHTML='<div class="empty"><h2>Admin access not enabled</h2><p>This signed-in account does not have admin access.</p><a class="btn orange" href="index.html">Back to store</a></div>';return;}
   const header=document.querySelector(".admin-top");
-  if(header){const logout=document.createElement("button");logout.className="btn light-btn";logout.textContent="Sign out";logout.onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};header.appendChild(logout);}
+  if(header){const actions=document.createElement("div");actions.className="admin-top-actions";const archive=document.createElement("button");archive.className="archive-shortcut";archive.type="button";archive.title="Open archived orders";archive.setAttribute("aria-label","Open archived orders");archive.innerHTML='<span aria-hidden="true">▤</span><span>Archive</span><b id="archivedOrderCount">0</b>';archive.onclick=openArchivedOrders;const logout=document.createElement("button");logout.className="btn light-btn";logout.textContent="Sign out";logout.onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};actions.append(archive,logout);header.appendChild(actions);}
   await renderAdmin();
   document.querySelectorAll(".admin-tabs button").forEach(button => {
     button.onclick = () => {
@@ -707,6 +707,7 @@ async function initAdmin(){
       button.classList.add("active");
       document.querySelectorAll(".admin-tab").forEach(tab => tab.classList.add("hidden"));
       document.getElementById("tab-" + button.dataset.tab)?.classList.remove("hidden");
+      if(button.dataset.tab==="orders")showOrderView("active");
     };
   });
 }
@@ -715,6 +716,8 @@ async function renderAdmin(){
   let o = await getOrders();
   const activeOrders = o.filter(x => !x.archivedAt);
   const archivedOrders = o.filter(x => !!x.archivedAt);
+  const archivedCount=document.getElementById("archivedOrderCount");
+  if(archivedCount)archivedCount.textContent=archivedOrders.length;
 
   let revenue = activeOrders
     .filter(x => x.status !== "Cancelled")
@@ -1032,10 +1035,7 @@ if (imageRows.length > 0 && (!productId || replaceImages)) {
   document.getElementById("tab-orders").innerHTML = `
     <h2>Order management</h2>
     <p>Delivered or cancelled orders can be archived after you no longer need them in the active list. Archiving keeps the order and customer history; you can restore it later.</p>
-    <div class="admin-tabs order-view-tabs" role="tablist" aria-label="Order lists">
-      <button type="button" class="active" data-order-view="active" onclick="showOrderView('active')">Active orders (${activeOrders.length})</button>
-      <button type="button" data-order-view="archived" onclick="showOrderView('archived')">Archived (${archivedOrders.length})</button>
-    </div>
+    <h3>Active orders (${activeOrders.length})</h3>
     <div id="activeOrdersView" style="overflow:auto">
 
       <table class="admin-table">
@@ -1122,6 +1122,7 @@ if (imageRows.length > 0 && (!productId || replaceImages)) {
 
     </div>
     <div id="archivedOrdersView" style="overflow:auto;display:none">
+      <div class="order-list-heading"><h3>Archived orders (${archivedOrders.length})</h3><button type="button" class="mini" onclick="showOrderView('active')">Back to active orders</button></div>
       <table class="admin-table">
         <thead><tr><th>Order</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
         <tbody>${archivedOrders.length ? archivedOrders.map(x => `<tr><td><b>${escapeHtml(x.id)}</b><br><small>${escapeHtml(x.date||"")}</small></td><td>${escapeHtml(x.customer||"")}<br><small>${escapeHtml(x.email||"")}</small><br>${escapeHtml(x.district||"")}</td><td>${escapeHtml(x.phone||"")}</td><td><b>${money(x.total)}</b></td><td><span class="status ${escapeHtml(x.status.toLowerCase())}">${escapeHtml(x.status)}</span></td><td><button class="btn light-btn" type="button" onclick="setOrderArchived('${x.id}',false)">Restore</button></td></tr>`).join("") : `<tr><td colspan="6">No archived orders.</td></tr>`}</tbody>
@@ -1206,7 +1207,10 @@ function showOrderView(view){
   if(!active||!archived)return;
   active.style.display=view==="active"?"":"none";
   archived.style.display=view==="archived"?"":"none";
-  document.querySelectorAll("[data-order-view]").forEach(button=>button.classList.toggle("active",button.dataset.orderView===view));
+}
+function openArchivedOrders(){
+  document.querySelector('.admin-tabs button[data-tab="orders"]')?.click();
+  showOrderView("archived");
 }
 async function setOrderArchived(id,archived){
   try{await saveOrderArchive(id,archived);await renderAdmin();showOrderView(archived?"active":"archived");showToast(archived?"Order archived ✓":"Order restored ✓")}

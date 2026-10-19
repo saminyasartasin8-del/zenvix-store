@@ -1,7 +1,9 @@
-V18 update
+V19 update
 - Supabase setup now creates/upgrades the products and product_images tables and sets public read/admin-only write access.
 - Product image storage policies are made admin-only for uploads, updates, and removals.
 - Admin product loading now shows a clear database error instead of silently displaying zero.
 - Editing a product preserves its current image gallery unless replacement photos or the remove option are selected; replaced/deleted product image files are cleaned up when possible.
-- Delivered and cancelled orders can be archived from the active admin order list and restored later. Archiving preserves the order row and customer order history.
+- Delivered and cancelled orders can be archived and restored. Archived orders are opened from a compact Archive shortcut in the admin dashboard header, not a persistent tab in the Orders view. Archiving preserves the order row and customer order history.
 - Supabase setup adds the archived_at column safely to existing order tables without deleting order data.
+
+- The Orders tab opens on active orders; the header Archive shortcut opens the archived list.

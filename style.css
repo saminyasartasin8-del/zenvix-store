@@ -428,3 +428,5 @@ body.zoom-open { overflow: hidden; }
 }
 
 @media (max-width: 600px) { .footer-grid { grid-template-columns: 1fr; } }
+
+.admin-top-actions{display:flex;align-items:center;gap:8px}.archive-shortcut{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #d9e0e8;border-radius:8px;background:#fff;color:#344054;font-size:12px;font-weight:750;cursor:pointer}.archive-shortcut>span:first-child{font-size:15px;color:var(--orange)}.archive-shortcut b{min-width:18px;padding:2px 5px;border-radius:12px;background:#fff0e8;color:#c2410c;text-align:center;font-size:10px}.order-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-list-heading h3{margin:12px 0}.admin-table button{margin-left:6px}@media(max-width:650px){.admin-top{align-items:center;gap:10px}.admin-top h1{font-size:24px}.archive-shortcut{padding:7px 8px}.admin-top-actions{gap:5px}}
