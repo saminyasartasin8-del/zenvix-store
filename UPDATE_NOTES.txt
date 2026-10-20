@@ -9,3 +9,7 @@ V20 update
 - The Orders tab opens on active orders; the header Archive shortcut opens the archived list.
 
 - The dashboard Archive shortcut no longer displays an archived-order count.
+
+V21 update
+- The Products breadcrumb is now a link back to the unfiltered All Products page.
+- The product listing heading now changes to the selected category, including when a category is opened from a direct URL.

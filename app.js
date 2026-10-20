@@ -162,25 +162,37 @@ async function renderFeatured(){let p=(await getProducts()).slice(0,4);document.
 function homeSearch(){let q=document.getElementById("homeSearch").value.trim();location.href="products.html"+(q?"?q="+encodeURIComponent(q):"")}
 async function initShop(){
   const params = new URLSearchParams(location.search);
-  let active = params.get("cat") || "all";
+  const filterButtons = [...document.querySelectorAll(".filters button")];
+  const requestedCategory = params.get("cat") || "all";
+  let active = filterButtons.find(button => button.dataset.cat.toLowerCase() === requestedCategory.toLowerCase())?.dataset.cat || "all";
   const initialQuery = params.get("q") || "";
   const search = document.getElementById("search");
   const grid = document.getElementById("productGrid");
+  const shopTitle = document.getElementById("shopTitle");
   if (!search || !grid) return;
   search.value = initialQuery;
 
   grid.innerHTML = '<div class="empty">Loading products…</div>';
   const products = await getProducts();
 
-  document.querySelectorAll(".filters button").forEach(button => {
+  filterButtons.forEach(button => {
     button.classList.toggle("active", button.dataset.cat === active);
     button.onclick = () => {
       active = button.dataset.cat || "all";
       document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
       button.classList.add("active");
+      updateShopTitle();
       draw();
     };
   });
+
+  function updateShopTitle(){
+    if (shopTitle) {
+      const selected = filterButtons.find(button => button.dataset.cat === active);
+      shopTitle.textContent = active === "all" ? "All products" : (selected?.textContent.trim() || active);
+    }
+  }
+  updateShopTitle();
 
   const sortSelect = document.getElementById("sort");
   if (sortSelect) sortSelect.onchange = draw;
