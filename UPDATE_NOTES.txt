@@ -17,3 +17,9 @@ V21 update
 V22 update
 - Admin product categories are no longer limited to a fixed dropdown. Enter a new category name or choose an existing suggestion.
 - Active product categories now populate the homepage category navigation, homepage category cards, and product listing filters.
+
+V23 update
+- Added a Vercel server-side Business Koro product endpoint. It keeps the API key out of browser code and verifies the caller is an authenticated ZENVIX admin before returning supplier catalog and cost data.
+- Added an Admin -> Products importer to select supplier products, set a category and customer selling price, and save selected products to Supabase with their images.
+- Added a supplier product ID column and unique index to the repeatable Supabase setup SQL to avoid importing duplicate supplier items.
+- Business Koro customer order submission is not part of this version; current checkout continues to save orders in ZENVIX only.

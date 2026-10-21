@@ -705,6 +705,106 @@ async function renderCheckout(){
   };
 }
 
+function safeSupplierImage(value){try{const url=new URL(String(value||""));return url.protocol==="https:"?url.href:""}catch{return ""}}
+function supplierProductMinimum(product){const minimum=Number(product?.minimumSellingPrice?.customerPaysDelivery);if(Number.isFinite(minimum)&&minimum>0)return minimum;return Math.max(0,Number(product?.costPrice)||0)+Math.max(0,Number(product?.packagingCost)||0)}
+function renderBusinessKoroProducts(products){
+  const root=document.getElementById("businessKoroProductList");
+  if(!root)return;
+  const available=(Array.isArray(products)?products:[]).filter(product=>product&&product.id!=null);
+  if(!available.length){root.innerHTML='<p class="bk-import-message">No products were returned by Business Koro.</p>';return}
+  const existingIds=new Set((window.adminProducts||[]).map(product=>String(product.supplier_product_id||"")).filter(Boolean));
+  root.innerHTML=`<label class="bk-import-search">Search supplier products <input id="businessKoroSearch" type="search" placeholder="Search by product name"></label><div id="businessKoroResults" class="bk-import-grid"></div>`;
+  const results=document.getElementById("businessKoroResults");
+  const draw=()=>{
+    const query=String(document.getElementById("businessKoroSearch")?.value||"").trim().toLocaleLowerCase();
+    const visible=available.filter(product=>!query||String(product.name||"").toLocaleLowerCase().includes(query)||String(product.brand||"").toLocaleLowerCase().includes(query));
+    if(!visible.length){results.innerHTML='<p class="bk-import-message">No matching products.</p>';return}
+    results.innerHTML=visible.map((product,index)=>{
+      const minPrice=supplierProductMinimum(product);
+      const suggested=Number(product.suggestedPrice)||minPrice;
+      const defaultPrice=Math.max(suggested,minPrice);
+      const availableNow=product.inStock===true;
+      const image=safeSupplierImage(Array.isArray(product.images)?product.images[0]:product.image);
+      const name=String(product.name||"Supplier product");
+      const alreadyAdded=existingIds.has(String(product.id));
+      return `<article class="bk-import-card" data-bk-card="${index}">
+        ${image?`<img class="bk-import-image" src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy">`:`<div class="bk-import-image bk-import-no-image">No image</div>`}
+        <div class="bk-import-card-body"><h4>${escapeHtml(name)}</h4><p>${escapeHtml(String(product.description||""))}</p>
+          <div class="bk-import-details"><span>Suggested: <b>${money(suggested)}</b></span><span>Minimum (customer pays delivery): <b>${money(minPrice)}</b></span><span>Cost (admin only): <b>${money(Number(product.costPrice)||0)}</b></span><span>Packaging: <b>${money(Number(product.packagingCost)||0)}</b></span><span class="${availableNow?"bk-in-stock":"bk-out-stock"}">${availableNow?"Available":"Out of stock"}</span></div>
+          <div class="bk-import-fields"><label>Store category<input name="bkCategory" list="productCategoryOptions" value="${escapeHtml(String(product.category||product.categoryName||"Accessories"))}" required></label><label>Your selling price<input name="bkPrice" type="number" min="${minPrice}" step="1" value="${defaultPrice}" required></label><label>Store stock<input name="bkStock" type="number" min="0" step="1" value="${availableNow?1:0}" required></label></div>
+          <button type="button" class="btn orange bk-import-action" data-bk-import="${index}" ${!availableNow||alreadyAdded?"disabled":""}>${alreadyAdded?"Already added":availableNow?"Add to my store":"Unavailable"}</button>
+        </div>
+      </article>`;
+    }).join("");
+    results.querySelectorAll("[data-bk-import]").forEach(button=>button.onclick=()=>{
+      const product=visible[Number(button.dataset.bkImport)];
+      const card=button.closest(".bk-import-card");
+      importBusinessKoroProduct(product,card,button);
+    });
+  };
+  document.getElementById("businessKoroSearch").oninput=draw;
+  draw();
+}
+async function importBusinessKoroProduct(product,card,button){
+  if(!product||!card)return;
+  const message=document.getElementById("businessKoroImportMessage");
+  const category=String(card.querySelector('[name="bkCategory"]')?.value||"").trim();
+  const price=Number(card.querySelector('[name="bkPrice"]')?.value);
+  const stock=Math.max(0,Number(card.querySelector('[name="bkStock"]')?.value)||0);
+  const minimum=supplierProductMinimum(product);
+  const cost=Number(product.costPrice)||0;
+  if(!category||!Number.isFinite(price)||price<minimum||price<=cost){showToast(`Set a category and a selling price of at least ${money(Math.max(minimum,cost+1))}.`);return}
+  if(stock<1){showToast("Set store stock to at least 1 to publish this item.");return}
+  button.disabled=true;button.textContent="Adding…";
+  const supplierId=String(product.id);
+  const {data:existing,error:lookupError}=await supabaseClient.from("products").select("id").eq("supplier_product_id",supplierId).maybeSingle();
+  if(lookupError){console.error("Supplier product lookup failed:",lookupError);showToast("Run the updated SUPABASE_SETUP.sql in Supabase, then try again.");button.disabled=false;button.textContent="Add to my store";return}
+  if(existing){showToast("This supplier product is already in your store.");button.textContent="Already added";return}
+  const variants=Array.isArray(product.variants)?product.variants.map(variant=>[variant.color?`Color: ${variant.color}`:"",variant.size?`Size: ${variant.size}`:"",variant.inStock===false?"Out of stock":"Available"].filter(Boolean).join(" • ")).filter(Boolean):[];
+  const images=(Array.isArray(product.images)?product.images:[]).map(safeSupplierImage).filter(Boolean);
+  const productData={
+    name:String(product.name||"Supplier product").trim(),
+    brand:String(product.brand||product.brandName||product.manufacturer||"Generic").trim(),
+    category,
+    price,
+    compare_at_price:price,
+    stock,
+    description:String(product.description||"").trim()||null,
+    specifications:variants.length?variants.join("\n"):null,
+    features:null,
+    featured:false,
+    active:true,
+    supplier_product_id:supplierId
+  };
+  const {data:inserted,error}=await supabaseClient.from("products").insert([productData]).select("id").single();
+  if(error){console.error("Business Koro product import failed:",error);showToast("Could not import the product. Check the database setup and try again.");button.disabled=false;button.textContent="Add to my store";return}
+  if(images.length){const {error:imageError}=await supabaseClient.from("product_images").insert(images.map((url,index)=>({product_id:inserted.id,url,sort_order:index})));if(imageError){console.error("Supplier product images were not imported:",imageError);await supabaseClient.from("products").delete().eq("id",inserted.id);showToast("Could not save product images; the import was cancelled.");button.disabled=false;button.textContent="Add to my store";return}}
+  if(message)message.textContent=`${productData.name} added to your store.`;
+  showToast("Product added to your store ✓");
+  await renderAdmin();
+}
+async function attachBusinessKoroImporter(){
+  const button=document.getElementById("loadBusinessKoroProducts");
+  if(!button)return;
+  button.onclick=async()=>{
+    const message=document.getElementById("businessKoroImportMessage");
+    const root=document.getElementById("businessKoroProductList");
+    const {data:{session}}=await supabaseClient.auth.getSession();
+    if(!session){if(message)message.textContent="Sign in to the admin panel first.";return}
+    button.disabled=true;button.textContent="Loading…";
+    if(message)message.textContent="Loading Business Koro products…";
+    if(root)root.innerHTML="";
+    try{
+      const response=await fetch("/api/businesskoro/products",{headers:{Authorization:`Bearer ${session.access_token}`}});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||`Request failed (${response.status}).`);
+      if(message)message.textContent=`${payload.data?.length||0} supplier products loaded. Choose items and set your price/category before importing.`;
+      renderBusinessKoroProducts(payload.data||[]);
+    }catch(error){console.error("Load Business Koro products failed:",error);if(message)message.textContent=error.message||"Could not load Business Koro products."}
+    finally{button.disabled=false;button.textContent="Load supplier products"}
+  };
+}
+
 async function initAdmin(){
   await loadStoreSettings();
   const {data:{session}}=await supabaseClient.auth.getSession();
@@ -874,6 +974,12 @@ async function renderAdmin(){
 
     </form>
 
+    <section class="bk-import-panel">
+      <div class="bk-import-heading"><div><h3>Import from Business Koro</h3><p>Load the supplier catalog, choose products for your store, set your category and selling price, then import. Supplier cost is shown only in this admin panel.</p></div><button class="btn light-btn" id="loadBusinessKoroProducts" type="button">Load supplier products</button></div>
+      <div id="businessKoroImportMessage" class="bk-import-message" role="status"></div>
+      <div id="businessKoroProductList"></div>
+    </section>
+
     <div style="overflow:auto">
 
       <table class="admin-table">
@@ -920,6 +1026,7 @@ async function renderAdmin(){
   `;
 
   document.getElementById("cancelProductEdit").onclick=resetProductForm;window.adminProducts=p;
+  attachBusinessKoroImporter();
   document.getElementById("productForm").onsubmit = async event => {
     event.preventDefault();
     const form = new FormData(event.target);

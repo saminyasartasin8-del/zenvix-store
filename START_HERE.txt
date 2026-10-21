@@ -9,6 +9,13 @@ ZENVIX Store — customer accounts and secure order access
 
 Product categories: In Admin -> Products, type the category name directly (for example, Hoodie or Computer Case). Existing category names are suggested as you type. After saving an active product, the category appears in the storefront navigation, homepage category cards, and product-page filters.
 
+Business Koro catalog import:
+1) In Supabase Dashboard -> SQL Editor, run this version's SUPABASE_SETUP.sql again. It adds supplier_product_id without deleting current products or orders.
+2) In Vercel Project Settings -> Environment Variables, confirm BUSINESSKORO_API_KEY is saved as a Secret for Production. Do not put the key in app.js or GitHub.
+3) Upload the entire project contents to the connected GitHub repository root, including the api/ and lib/ folders. Vercel deploys the server function at /api/businesskoro/products.
+4) After Vercel reports the new deployment Ready, sign into Admin -> Products and choose Load supplier products. Set each product's store category and selling price before adding it.
+5) Supplier cost is visible only in the admin importer. The import does not submit customer orders to Business Koro; checkout forwarding is a separate integration step.
+
 Customers can browse without signing in. Buy Now and checkout require a customer account. Each order is linked to its signed-in user; customers can see only their own order history, while the admin can see and manage all orders. The account email is included with each order.
 
 Security notes:

@@ -64,8 +64,12 @@ alter table public.products add column if not exists specifications text;
 alter table public.products add column if not exists features text;
 alter table public.products add column if not exists featured boolean not null default false;
 alter table public.products add column if not exists active boolean not null default true;
+alter table public.products add column if not exists supplier_product_id text;
 alter table public.products add column if not exists created_at timestamptz not null default now();
 update public.products set active = true where active is null;
+create unique index if not exists products_supplier_product_id_unique
+  on public.products (supplier_product_id)
+  where supplier_product_id is not null;
 
 -- Match product_images.product_id to the existing products.id type.
 do $$

@@ -430,3 +430,28 @@ body.zoom-open { overflow: hidden; }
 @media (max-width: 600px) { .footer-grid { grid-template-columns: 1fr; } }
 
 .admin-top-actions{display:flex;align-items:center;gap:8px}.archive-shortcut{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #d9e0e8;border-radius:8px;background:#fff;color:#344054;font-size:12px;font-weight:750;cursor:pointer}.archive-shortcut>span:first-child{font-size:15px;color:var(--orange)}.archive-shortcut b{min-width:18px;padding:2px 5px;border-radius:12px;background:#fff0e8;color:#c2410c;text-align:center;font-size:10px}.order-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-list-heading h3{margin:12px 0}.admin-table button{margin-left:6px}@media(max-width:650px){.admin-top{align-items:center;gap:10px}.admin-top h1{font-size:24px}.archive-shortcut{padding:7px 8px}.admin-top-actions{gap:5px}}
+
+/* Business Koro admin-only product importer. */
+.bk-import-panel{margin:26px 0;padding:18px;border:1px solid var(--line);border-radius:12px;background:#f9fafb}
+.bk-import-heading{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.bk-import-heading h3{margin:0 0 7px}
+.bk-import-heading p,.bk-import-message{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.5}
+.bk-import-search{display:block;margin:12px 0;font-size:12px;font-weight:800}
+.bk-import-search input{display:block;width:min(420px,100%);margin-top:6px;padding:10px;border:1px solid var(--line);border-radius:8px}
+.bk-import-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bk-import-card{display:grid;grid-template-columns:115px 1fr;gap:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.bk-import-image{width:115px;height:125px;object-fit:contain;background:#f4f5f7;border-radius:8px}
+.bk-import-no-image{display:grid;place-items:center;color:var(--muted);font-size:12px}
+.bk-import-card-body{min-width:0}
+.bk-import-card h4{margin:2px 0 6px}
+.bk-import-card p{margin:0 0 8px;color:var(--muted);font-size:12px;line-height:1.4;max-height:48px;overflow:auto}
+.bk-import-details{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:11px;color:var(--muted)}
+.bk-in-stock{color:var(--green);font-weight:800}
+.bk-out-stock{color:var(--red);font-weight:800}
+.bk-import-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+.bk-import-fields label{font-size:10px;font-weight:800}
+.bk-import-fields input{display:block;width:100%;min-width:0;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:12px}
+.bk-import-action{width:100%;padding:9px}
+.bk-import-action:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:900px){.bk-import-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.bk-import-heading{align-items:flex-start;flex-direction:column}.bk-import-card{grid-template-columns:78px 1fr;padding:9px;gap:9px}.bk-import-image{width:78px;height:92px}.bk-import-fields{grid-template-columns:1fr 1fr}.bk-import-details{grid-template-columns:1fr 1fr}}
