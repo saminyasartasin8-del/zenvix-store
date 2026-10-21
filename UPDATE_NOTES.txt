@@ -13,3 +13,7 @@ V20 update
 V21 update
 - The Products breadcrumb is now a link back to the unfiltered All Products page.
 - The product listing heading now changes to the selected category, including when a category is opened from a direct URL.
+
+V22 update
+- Admin product categories are no longer limited to a fixed dropdown. Enter a new category name or choose an existing suggestion.
+- Active product categories now populate the homepage category navigation, homepage category cards, and product listing filters.

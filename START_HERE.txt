@@ -7,6 +7,8 @@ ZENVIX Store — customer accounts and secure order access
 5) Create the store owner's Auth user, copy its UUID, and run the final INSERT example in SUPABASE_SETUP.sql to grant admin access.
 6) Deploy all files together, including account.html, on one domain. Share the public index.html URL with customers. Keep admin.html private.
 
+Product categories: In Admin -> Products, type the category name directly (for example, Hoodie or Computer Case). Existing category names are suggested as you type. After saving an active product, the category appears in the storefront navigation, homepage category cards, and product-page filters.
+
 Customers can browse without signing in. Buy Now and checkout require a customer account. Each order is linked to its signed-in user; customers can see only their own order history, while the admin can see and manage all orders. The account email is included with each order.
 
 Security notes:

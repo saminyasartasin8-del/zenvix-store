@@ -158,22 +158,34 @@ function card(p){
     <div><span class="price">${money(p.price)}</span>${p.old > p.price ? `<span class="old">${money(p.old)}</span>` : ""}</div>
     <div class="product-actions"><button class="buy-now" onclick="buyNow('${String(p.id).replace(/'/g, "\\'")}')">Buy Now</button><button class="add" onclick="addToCart('${String(p.id).replace(/'/g, "\\'")}')">Add to cart</button></div></div></article>`;
 }
-async function renderFeatured(){let p=(await getProducts()).slice(0,4);document.getElementById("featuredGrid").innerHTML=p.map(card).join("");updateCartCount()}
+function getProductCategories(products){const seen=new Set();return products.map(product=>String(product.category||product.cat||"Other").trim()).filter(category=>{const key=category.toLocaleLowerCase();if(!category||seen.has(key))return false;seen.add(key);return true})}
+function categoryIcon(category){const value=category.toLocaleLowerCase();if(/power|battery|bank/.test(value))return "🔋";if(/audio|headphone|earbud/.test(value))return "🎧";if(/gaming|game/.test(value))return "🎮";if(/speaker/.test(value))return "🔊";if(/keyboard|mouse/.test(value))return "⌨️";if(/charg|cable|adapter/.test(value))return "🔌";if(/cloth|hood|shirt|fashion|apparel/.test(value))return "👕";if(/computer|case|pc/.test(value))return "🖥️";return "📦"}
+function renderHomepageCategories(products){
+  const categories=getProductCategories(products);
+  const nav=document.getElementById("categoryNavLinks");
+  if(nav)nav.innerHTML=`<a href="products.html">All Products</a>${categories.map(category=>`<a href="products.html?cat=${encodeURIComponent(category)}">${escapeHtml(category)}</a>`).join("")}`;
+  const cards=document.getElementById("categoryCards");
+  if(cards)cards.innerHTML=categories.map(category=>{const count=products.filter(product=>String(product.category||product.cat||"Other").trim().toLocaleLowerCase()===category.toLocaleLowerCase()).length;return `<a href="products.html?cat=${encodeURIComponent(category)}"><i>${categoryIcon(category)}</i><b>${escapeHtml(category)}</b><span>${count} ${count===1?"product":"products"}</span></a>`}).join("");
+}
+async function renderFeatured(){const products=await getProducts();renderHomepageCategories(products);document.getElementById("featuredGrid").innerHTML=products.slice(0,4).map(card).join("");updateCartCount()}
 function homeSearch(){let q=document.getElementById("homeSearch").value.trim();location.href="products.html"+(q?"?q="+encodeURIComponent(q):"")}
 async function initShop(){
   const params = new URLSearchParams(location.search);
-  const filterButtons = [...document.querySelectorAll(".filters button")];
   const requestedCategory = params.get("cat") || "all";
-  let active = filterButtons.find(button => button.dataset.cat.toLowerCase() === requestedCategory.toLowerCase())?.dataset.cat || "all";
   const initialQuery = params.get("q") || "";
   const search = document.getElementById("search");
   const grid = document.getElementById("productGrid");
   const shopTitle = document.getElementById("shopTitle");
+  const filterRoot=document.getElementById("categoryFilters");
   if (!search || !grid) return;
   search.value = initialQuery;
 
   grid.innerHTML = '<div class="empty">Loading products…</div>';
   const products = await getProducts();
+  const categories=getProductCategories(products);
+  if(filterRoot)filterRoot.innerHTML=`<b>Categories</b><button data-cat="all">All</button>${categories.map(category=>`<button data-cat="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("")}`;
+  const filterButtons = [...document.querySelectorAll(".filters button")];
+  let active = filterButtons.find(button => button.dataset.cat.toLowerCase() === requestedCategory.toLowerCase())?.dataset.cat || "all";
 
   filterButtons.forEach(button => {
     button.classList.toggle("active", button.dataset.cat === active);
@@ -205,14 +217,7 @@ async function initShop(){
       const name = String(product.name || "").toLowerCase();
       const brand = String(product.brand || "").toLowerCase();
 
-      const categoryMatch =
-        active === "all" ||
-        category.toLowerCase() === active.toLowerCase() ||
-        (active === "Gaming" && ["gaming", "mouse", "keyboard", "mouse pad"].includes(category.toLowerCase())) ||
-        (active === "Speakers" && ["speaker", "speakers", "earbuds", "headphones"].includes(category.toLowerCase())) ||
-        (active === "Headphones" && ["headphone", "headphones"].includes(category.toLowerCase())) ||
-        (active === "Keyboard" && ["keyboard", "mouse", "mouse pad", "gaming"].includes(category.toLowerCase())) ||
-        (active === "Chargers" && ["charger", "chargers", "cable", "cables"].includes(category.toLowerCase()));
+      const categoryMatch = active === "all" || category.toLowerCase() === active.toLowerCase();
 
       const searchMatch = !keyword || name.includes(keyword) ||
         category.toLowerCase().includes(keyword) || brand.includes(keyword);
@@ -732,6 +737,8 @@ async function renderAdmin(){
   let revenue = activeOrders
     .filter(x => x.status !== "Cancelled")
     .reduce((s, x) => s + x.total, 0);
+  const existingCategories=[...new Set(p.map(product=>String(product.category||product.cat||"").trim()).filter(Boolean))]
+    .map(category=>`<option value="${escapeHtml(category)}"></option>`).join("");
 
   document.getElementById("dashboardCards").innerHTML = `
     <div class="dash-card">
@@ -794,14 +801,8 @@ async function renderAdmin(){
         required
       >
 
-      <select name="cat">
-        <option>Power Bank</option>
-        <option>Headphones</option>
-        <option>Gaming</option>
-        <option>Keyboard</option>
-        <option>Speakers</option>
-        <option>Chargers</option>
-      </select>
+      <input name="cat" list="productCategoryOptions" placeholder="Category (type a new one too)" required>
+      <datalist id="productCategoryOptions">${existingCategories}</datalist>
 
       <input
         name="price"

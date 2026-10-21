@@ -12,7 +12,7 @@
 <div class="search"><input id="homeSearch" placeholder="Search for products, brands & categories"><button onclick="homeSearch()">⌕</button></div>
 <div class="nav-actions"><a href="account.html" class="account-link">Account</a><a href="cart.html" class="cart">🛒 <b id="cartCount">0</b></a></div>
 </div>
-<div class="container category-nav"><a href="products.html">All Products</a><a href="products.html?cat=Power Bank">Power Bank</a><a href="products.html?cat=Headphones">Headphones</a><a href="products.html?cat=Gaming">Gaming</a><a href="products.html?cat=Speakers">Speakers</a><a href="products.html?cat=Keyboard">Keyboard & Mouse</a><a href="products.html?cat=Chargers">Chargers & Cables</a></div>
+<div class="container category-nav" id="categoryNavLinks"><a href="products.html">All Products</a></div>
 </header>
 
 <main>
@@ -22,13 +22,7 @@
 </div></section>
 
 <section class="container section"><div class="section-title"><div><small>SHOP SMART</small><h2>Popular categories</h2></div><a href="products.html">View all →</a></div>
-<div class="category-cards">
-<a href="products.html?cat=Power Bank"><i>🔋</i><b>Power Bank</b><span>Fast charging</span></a>
-<a href="products.html?cat=Headphones"><i>🎧</i><b>Audio</b><span>Headphones & earbuds</span></a>
-<a href="products.html?cat=Gaming"><i>🎮</i><b>Gaming</b><span>Mouse, keyboard & more</span></a>
-<a href="products.html?cat=Speakers"><i>🔊</i><b>Speakers</b><span>Wireless sound</span></a>
-<a href="products.html?cat=Chargers"><i>🔌</i><b>Charging</b><span>Cables & adapters</span></a>
-</div></section>
+<div class="category-cards" id="categoryCards"></div></section>
 
 <section id="deals" class="section deals"><div class="container"><div class="section-title"><div><small>LIMITED OFFERS</small><h2>Deals of the day</h2></div><a href="products.html">Shop all →</a></div><div id="featuredGrid" class="product-grid"></div></div></section>
 

@@ -25,7 +25,7 @@
 - Admins can archive Delivered or Cancelled orders to hide them from the active order list. Archived orders remain saved, stay in the customer's order history, and can be restored from the Archive shortcut in the Admin dashboard header. Run this ZIP's `SUPABASE_SETUP.sql` before using this feature; it adds `archived_at` without deleting existing orders.
 - Delivery settings are stored in `zenvix_delivery_settings`; checkout on other devices reads the same shared settings.
 - Store name, contact details, homepage copy, promotion visibility, and footer content/links are stored in `zenvix_store_settings` and can be changed from Admin → Storefront. Click a storefront preview card to jump to its related editor field.
-- Admin → Products lets you add, edit, and delete products. When editing, current photos stay unless you add replacement photos or select “Remove current product photos.”
+- Admin → Products lets you add, edit, and delete products. Type any category name in the Category field (for example, Hoodie or Computer Case); existing categories appear as autocomplete suggestions. Categories used by active products appear automatically in the storefront navigation, category cards, and product filters. When editing, current photos stay unless you add replacement photos or select “Remove current product photos.”
 - Admin login uses Supabase Auth. Creating an Auth user alone does not grant admin permissions; its UUID must be added to `zenvix_admin_users`.
 - `SUPABASE_SETUP.sql` creates the new tables and Row Level Security policies. Run it before testing this version.
 - Never put a Supabase service-role key in browser JavaScript. Use only the public/publishable key in the frontend.
