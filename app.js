@@ -789,14 +789,24 @@ async function attachBusinessKoroImporter(){
   button.onclick=async()=>{
     const message=document.getElementById("businessKoroImportMessage");
     const root=document.getElementById("businessKoroProductList");
-    const {data:{session}}=await supabaseClient.auth.getSession();
-    if(!session){if(message)message.textContent="Sign in to the admin panel first.";return}
     button.disabled=true;button.textContent="Loading…";
     if(message)message.textContent="Loading Business Koro products…";
     if(root)root.innerHTML="";
     try{
-      const response=await fetch("/api/businesskoro/products",{headers:{Authorization:`Bearer ${session.access_token}`}});
-      const payload=await response.json().catch(()=>({}));
+      const {data:{session}}=await supabaseClient.auth.getSession();
+      if(!session){if(message)message.textContent="Sign in to the admin panel first.";return}
+      const requestProducts=async accessToken=>{
+        const response=await fetch("/api/businesskoro/products",{headers:{Authorization:`Bearer ${accessToken}`}});
+        const payload=await response.json().catch(()=>({}));
+        return {response,payload};
+      };
+      let result=await requestProducts(session.access_token);
+      if(result.response.status===401){
+        const {data,error}=await supabaseClient.auth.refreshSession();
+        if(error||!data?.session?.access_token)throw new Error("Your admin session could not be refreshed. Sign out, sign in again, then retry.");
+        result=await requestProducts(data.session.access_token);
+      }
+      const {response,payload}=result;
       if(!response.ok)throw new Error(payload.error||`Request failed (${response.status}).`);
       if(message)message.textContent=`${payload.data?.length||0} supplier products loaded. Choose items and set your price/category before importing.`;
       renderBusinessKoroProducts(payload.data||[]);
