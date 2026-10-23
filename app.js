@@ -74,6 +74,7 @@ async function getProducts(){
       )
     `)
     .eq("active", true)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if(error){
@@ -86,6 +87,7 @@ async function getProducts(){
   const products = (data || []).map(p => ({
     ...p,
     id: String(p.id),
+    sort_order: Number(p.sort_order) || 0,
     cat: p.category || p.cat || "Other",
     category: p.category || p.cat || "Other",
     price: Number(p.price) || 0,
@@ -101,7 +103,7 @@ async function getProducts(){
     rating: Number(p.rating) || 5,
     desc: p.description || p.desc || "",
     specifications: p.specifications || ""
-  }));
+  })).sort((a,b)=>(a.sort_order-b.sort_order)||(String(b.created_at||"").localeCompare(String(a.created_at||""))));
 
   console.log("Supabase products:", products);
   return products;
@@ -774,6 +776,7 @@ async function importBusinessKoroProduct(product,card,button){
     features:null,
     featured:false,
     active:true,
+    sort_order:Math.max(-1,...(window.adminProducts||[]).map(item=>Number(item.sort_order)||0))+1,
     supplier_product_id:supplierId
   };
   const {data:inserted,error}=await supabaseClient.from("products").insert([productData]).select("id").single();
@@ -996,6 +999,7 @@ async function renderAdmin(){
 
         <thead>
           <tr>
+            <th>#</th>
             <th>Product</th>
             <th>Category</th>
             <th>Price</th>
@@ -1010,20 +1014,21 @@ async function renderAdmin(){
             p.length
               ? p.map(x => `
                 <tr>
-                  <td>${x.name}</td>
+                  <td>${p.indexOf(x)+1}</td>
+                  <td>${escapeHtml(x.name)}</td>
                   <td>${x.cat}</td>
                   <td>${money(x.price)}</td>
                   <td>${x.stock}</td>
 
                   <td>
-                    <button class="mini" onclick="editProduct('${x.id}')">Edit</button><button class="mini danger" onclick="deleteProduct('${x.id}')">Delete</button>
+                    <button class="mini" onclick="moveProduct('${x.id}',-1)" title="Move up">↑</button><button class="mini" onclick="moveProduct('${x.id}',1)" title="Move down">↓</button><button class="mini" onclick="editProduct('${x.id}')">Edit</button><button class="mini danger" onclick="deleteProduct('${x.id}')">Delete</button>
                   </td>
 
                 </tr>
               `).join("")
               : `
                 <tr>
-                  <td colspan="5">No products found.</td>
+                  <td colspan="6">No products found.</td>
                 </tr>
               `
           }
@@ -1064,7 +1069,7 @@ const features = String(form.get("features") || "").trim();
     if (button) { button.disabled = true; button.textContent = "Saving…"; }
 
     const productId=String(form.get("productId")||"").trim();
-    const productData={name,brand,category,price,compare_at_price:compareAtPrice,stock,description:description||null,specifications:specifications||null,features:features||null,featured,active:true};
+    const productData={name,brand,category,price,compare_at_price:compareAtPrice,stock,description:description||null,specifications:specifications||null,features:features||null,featured,active:true,sort_order:productId?(window.adminProducts||[]).find(item=>String(item.id)===productId)?.sort_order??0:Math.max(-1,...(window.adminProducts||[]).map(item=>Number(item.sort_order)||0))+1};
     let query=supabaseClient.from("products");
     if(productId)query=query.update(productData).eq("id",productId).select("id").single();else query=query.insert([productData]).select("id").single();
     const {data:inserted,error}=await query;
@@ -1310,6 +1315,7 @@ if (imageRows.length > 0 && (!productId || replaceImages)) {
 }
 
 function resetProductForm(){const f=document.getElementById("productForm");if(!f)return;f.reset();f.elements.productId.value="";f.elements.img.placeholder="Image URL";document.getElementById("productFormTitle").textContent="Add a product";f.querySelector('button[type="submit"]').textContent="Add product";document.getElementById("cancelProductEdit").hidden=true;document.getElementById("removeImagesLabel").hidden=true}
+async function moveProduct(id,direction){const list=[...(window.adminProducts||[])];const index=list.findIndex(item=>String(item.id)===String(id));const target=index+Number(direction);if(index<0||target<0||target>=list.length)return;[list[index],list[target]]=[list[target],list[index]];const results=await Promise.all(list.map((item,position)=>supabaseClient.from("products").update({sort_order:position}).eq("id",item.id)));const failed=results.find(result=>result.error);if(failed){console.error("Product ordering failed:",failed.error);showToast("Could not save product order. Run the updated Supabase SQL, then retry.");return}showToast("Product order saved ✓");await renderAdmin()}
 function editProduct(id){const p=(window.adminProducts||[]).find(x=>String(x.id)===String(id));if(!p)return;const f=document.getElementById("productForm");f.elements.productId.value=p.id;f.elements.name.value=p.name||"";f.elements.brand.value=p.brand||"";f.elements.cat.value=p.cat||"Other";f.elements.price.value=p.price||"";f.elements.old.value=p.old||"";f.elements.stock.value=p.stock||0;f.elements.img.value="";f.elements.img.placeholder="Leave blank to keep existing photos";f.elements.badge.value=p.badge||"";f.elements.featured.value=String(!!p.featured);f.elements.description.value=p.description||p.desc||"";f.elements.specifications.value=p.specifications||"";f.elements.features.value=p.features||"";document.getElementById("removeImagesLabel").hidden=!(p.images?.length||p.img);document.getElementById("productFormTitle").textContent="Edit product";f.querySelector('button[type="submit"]').textContent="Save changes";document.getElementById("cancelProductEdit").hidden=false;f.scrollIntoView({behavior:"smooth",block:"center"})}
 function productStoragePath(url,productId){try{const parsed=new URL(url);const marker="/storage/v1/object/public/product-images/";const index=parsed.pathname.indexOf(marker);if(index<0)return null;const path=decodeURIComponent(parsed.pathname.slice(index+marker.length));return path.startsWith(`${productId}/`)?path:null}catch{return null}}
 async function deleteProduct(id) {

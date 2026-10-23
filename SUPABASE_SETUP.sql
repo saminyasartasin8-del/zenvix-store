@@ -64,6 +64,7 @@ alter table public.products add column if not exists specifications text;
 alter table public.products add column if not exists features text;
 alter table public.products add column if not exists featured boolean not null default false;
 alter table public.products add column if not exists active boolean not null default true;
+alter table public.products add column if not exists sort_order integer not null default 0;
 alter table public.products add column if not exists supplier_product_id text;
 alter table public.products add column if not exists created_at timestamptz not null default now();
 update public.products set active = true where active is null;
