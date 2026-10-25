@@ -261,36 +261,22 @@ async function renderDetail(){
     return;
   }
 
+  const videoList = (product.videos || []).map(url => ({type:"video",url}));
   const imageList = [...new Set([...(product.images || []), product.img].filter(Boolean))];
-
-  if (!imageList.length) {
-    imageList.push("https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image");
-  }
-
-  const img = imageList[0];
+  if (!imageList.length && !videoList.length) imageList.push("https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image");
+  const mediaList = [...videoList, ...imageList.map(url => ({type:"image",url}))];
+  const img = imageList[0] || "https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image";
 
   detail.innerHTML = `
     <div class="detail-card">
       <div class="detail-gallery">
-        <button type="button" class="detail-image" id="mainProductImage" aria-label="Zoom product image">
-          <img id="detailMainImg" src="${img}" alt="${product.name || "Product"}" onerror="this.src='https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image'">
-          <span class="zoom-hint">⌕ Tap to zoom</span>
-        </button>
-
-        ${imageList.length > 1
-          ? `<div class="product-thumbnails" id="productThumbnails" aria-label="More product images">
-              ${imageList.map((url, index) => `
-                <button type="button" class="product-thumb ${index === 0 ? "active" : ""}" data-image-index="${index}" aria-label="View product image ${index + 1}">
-                  <img src="${url}" alt="${product.name || "Product"} view ${index + 1}" onerror="this.style.display='none'">
-                </button>
-              `).join("")}
-            </div>`
-          : `<p class="gallery-note">Tap the image to zoom</p>`
-        }
-        ${(product.videos||[]).map((url,index)=>`<video class="detail-product-video" controls preload="metadata" playsinline aria-label="${escapeHtml(product.name||"Product")} video ${index+1}"><source src="${escapeHtml(url)}" type="${url.toLowerCase().includes(".webm")?"video/webm":"video/mp4"}">Your browser does not support video playback.</video>`).join("")}
-      </div>
-
-      <div class="detail-info">
+        <div class="detail-image" id="mainProductImage">
+          <img id="detailMainImg" src="${mediaList[0]?.type==="image"?mediaList[0].url:img}" alt="${product.name || "Product"}" onerror="this.src='https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image'" ${mediaList[0]?.type==="video"?"hidden":""}>
+          <video id="detailMainVideo" class="detail-product-video" controls preload="metadata" playsinline ${mediaList[0]?.type==="video"?"":"hidden"}></video>
+          <span class="zoom-hint" id="productZoomHint" ${mediaList[0]?.type==="video"?"hidden":""}>⌕ Tap to zoom</span>
+        </div>
+        ${mediaList.length > 1 ? `<div class="product-thumbnails" id="productThumbnails" aria-label="Product photos and videos">${mediaList.map((media,index)=>`<button type="button" class="product-thumb ${index===0?"active":""}" data-media-index="${index}" aria-label="View product ${media.type} ${index+1}">${media.type==="video"?`<video src="${escapeHtml(media.url)}" muted preload="metadata"></video><span class="video-thumb-play">▶</span>`:`<img src="${escapeHtml(media.url)}" alt="${escapeHtml(product.name||"Product")} photo ${index+1}" onerror="this.style.display='none'">`}</button>`).join("")}</div>` : mediaList[0]?.type==="image" ? `<p class="gallery-note">Tap the image to zoom</p>` : ""}
+      </div>      <div class="detail-info">
         <small>${product.brand || ""} • ${product.cat || product.category || "Other"}</small>
 
         <h1>${product.name || "Product"}</h1>
@@ -347,6 +333,8 @@ async function renderDetail(){
   const zoomImg = document.getElementById("zoomImage");
 
   let activeImageIndex = 0;
+  let activeMediaIndex = 0;
+  const mainVideo = document.getElementById("detailMainVideo");
   let zoomScale = 1;
   let panX = 0;
   let panY = 0;
@@ -377,27 +365,24 @@ async function renderDetail(){
   const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const pointerMidpoint = (a, b) => ({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 
-  const setProductImage = (index) => {
-    activeImageIndex = (index + imageList.length) % imageList.length;
-
-    mainImg.src = imageList[activeImageIndex];
-    zoomImg.src = imageList[activeImageIndex];
-
-    document.querySelectorAll(".product-thumb").forEach((button, i) => {
-      button.classList.toggle("active", i === activeImageIndex);
-    });
-
-    zoomScale = 1;
-    panX = 0;
-    panY = 0;
-    applyZoomTransform();
+  const setProductImage = index => {
+    activeImageIndex=(index+imageList.length)%imageList.length;
+    mainImg.src=imageList[activeImageIndex];zoomImg.src=imageList[activeImageIndex];
+    zoomScale=1;panX=0;panY=0;applyZoomTransform();
   };
-
-  document.querySelectorAll(".product-thumb").forEach(button => {
-    button.addEventListener("click", () => {
-      setProductImage(Number(button.dataset.imageIndex));
-    });
-  });
+  const setProductMedia = index => {
+    activeMediaIndex=(index+mediaList.length)%mediaList.length;
+    const media=mediaList[activeMediaIndex];
+    document.querySelectorAll(".product-thumb").forEach(button=>button.classList.toggle("active",Number(button.dataset.mediaIndex)===activeMediaIndex));
+    const hint=document.getElementById("productZoomHint");
+    if(media.type==="video"){
+      mainImg.hidden=true;mainVideo.hidden=false;mainVideo.src=media.url;mainVideo.load();if(hint)hint.hidden=true;
+    }else{
+      mainVideo.pause();mainVideo.removeAttribute("src");mainVideo.load();mainVideo.hidden=true;mainImg.hidden=false;if(hint)hint.hidden=false;setProductImage(imageList.indexOf(media.url));
+    }
+  };
+  document.querySelectorAll(".product-thumb").forEach(button=>button.addEventListener("click",()=>setProductMedia(Number(button.dataset.mediaIndex))));
+  setProductMedia(0);
 
   const closeZoom = () => {
     zoomModal.classList.remove("open");
@@ -406,7 +391,8 @@ async function renderDetail(){
   };
 
   document.getElementById("mainProductImage").addEventListener("click", () => {
-    setProductImage(activeImageIndex);
+    if(mediaList[activeMediaIndex]?.type!=="image")return;
+    setProductImage(imageList.indexOf(mediaList[activeMediaIndex].url));
     zoomModal.classList.add("open");
     zoomModal.setAttribute("aria-hidden", "false");
     document.body.classList.add("zoom-open");
