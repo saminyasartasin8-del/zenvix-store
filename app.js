@@ -1108,7 +1108,8 @@ if (imageUrl) {
   imageRows.push({
     product_id: inserted.id,
     url: imageUrl,
-    sort_order: imageRows.length
+    sort_order: imageRows.length,
+    media_type: "image"
   });
 }
 
@@ -1137,7 +1138,8 @@ for (const file of imageFiles) {
     imageRows.push({
       product_id: inserted.id,
       url: publicData.publicUrl,
-      sort_order: imageRows.length
+      sort_order: imageRows.length,
+      media_type: "image"
     });
   }
 }
