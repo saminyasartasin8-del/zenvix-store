@@ -261,6 +261,10 @@ async function renderDetail(){
     return;
   }
 
+  const specificationText = String(product.specifications || "").trim();
+  const descriptionText = String(product.desc || product.description || "").trim();
+  const deliveryText = String(storeSettings.deliveryInfo || STORE_DEFAULTS.deliveryInfo || "").trim();
+  const firstDetailTab = specificationText ? "specification" : descriptionText ? "description" : "delivery";
   const videoList = (product.videos || []).map(url => ({type:"video",url}));
   const imageList = [...new Set([...(product.images || []), product.img].filter(Boolean))];
   if (!imageList.length && !videoList.length) imageList.push("https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image");
@@ -288,7 +292,7 @@ async function renderDetail(){
           ${product.old > product.price ? `<span class="old">${money(product.old)}</span>` : ""}
         </div>
 
-        ${product.features ? `<section class="detail-section"><h3>Key Features</h3><ul>${String(product.features).split("\n").filter(line=>line.trim()).map(line=>`<li>${escapeHtml(line.trim())}</li>`).join("")}</ul></section>` : ""}
+        ${String(product.features || "").trim() ? `<section class="detail-section"><h3>Key Features</h3><ul>${String(product.features).split("\n").filter(line=>line.trim()).map(line=>`<li>${escapeHtml(line.trim())}</li>`).join("")}</ul></section>` : ""}
         <div class="cash-price-option"><input type="radio" name="detailPayment" checked disabled aria-label="Cash Discount Price"><span><b>Cash Discount Price</b><small>Pay the discounted price</small></span><span class="cash-price-values"><strong>${money(product.price)}</strong>${product.old > product.price ? `<del>${money(product.old)}</del><em>${Math.round((1-product.price/product.old)*100)}% OFF</em>` : ""}</span></div>
 
         <p class="stock-line"><b>Stock:</b> ${Number(product.stock)||0} units • <b>Delivery:</b> Nationwide</p>
@@ -303,12 +307,11 @@ async function renderDetail(){
         </div>
       </div>
     </div>
-    <div class="product-detail-tabs"><div class="detail-tab-buttons"><button class="active" type="button" data-detail-tab="specification">Specification</button><button type="button" data-detail-tab="description">Description</button><button type="button" data-detail-tab="delivery">Delivery</button></div>
-      <section class="detail-tab-panel" id="detailTabSpecification"><h2>Specification</h2>${product.specifications?`<ul>${String(product.specifications).split("\n").filter(line=>line.trim()).map(line=>`<li>${escapeHtml(line.trim())}</li>`).join("")}</ul>`:`<p>No specifications added yet.</p>`}</section>
-      <section class="detail-tab-panel hidden" id="detailTabDescription"><h2>Description</h2><p>${escapeHtml(product.desc||product.description||"Product details will be added soon.")}</p></section>
-      <section class="detail-tab-panel hidden" id="detailTabDelivery"><h2>Delivery & Returns</h2><p>${escapeHtml(storeSettings.deliveryInfo||STORE_DEFAULTS.deliveryInfo).replace(/\n/g,"<br>")}</p></section>
+    <div class="product-detail-tabs"><div class="detail-tab-buttons">${specificationText ? `<button class="${firstDetailTab==="specification"?"active":""}" type="button" data-detail-tab="specification">Specification</button>` : ""}${descriptionText ? `<button class="${firstDetailTab==="description"?"active":""}" type="button" data-detail-tab="description">Description</button>` : ""}${deliveryText ? `<button class="${firstDetailTab==="delivery"?"active":""}" type="button" data-detail-tab="delivery">Delivery</button>` : ""}</div>
+      ${specificationText ? `<section class="detail-tab-panel ${firstDetailTab==="specification"?"":"hidden"}" id="detailTabSpecification"><h2>Specification</h2><ul>${specificationText.split("\n").filter(line=>line.trim()).map(line=>`<li>${escapeHtml(line.trim())}</li>`).join("")}</ul></section>` : ""}
+      ${descriptionText ? `<section class="detail-tab-panel ${firstDetailTab==="description"?"":"hidden"}" id="detailTabDescription"><h2>Description</h2><p>${escapeHtml(descriptionText)}</p></section>` : ""}
+      ${deliveryText ? `<section class="detail-tab-panel ${firstDetailTab==="delivery"?"":"hidden"}" id="detailTabDelivery"><h2>Delivery & Returns</h2><p>${escapeHtml(deliveryText).replace(/\n/g,"<br>")}</p></section>` : ""}
     </div>
-
     <div class="image-zoom-modal" id="imageZoomModal" aria-hidden="true">
       <button type="button" class="zoom-close" id="zoomClose" aria-label="Close image">×</button>
       <button type="button" class="zoom-nav zoom-prev" id="zoomPrev" aria-label="Previous photo or video">‹</button>
@@ -330,7 +333,7 @@ async function renderDetail(){
     </div>
   `;
 
-  document.querySelectorAll("[data-detail-tab]").forEach(button=>button.onclick=()=>{document.querySelectorAll("[data-detail-tab]").forEach(b=>b.classList.toggle("active",b===button));document.getElementById("detailTabSpecification").classList.toggle("hidden",button.dataset.detailTab!=="specification");document.getElementById("detailTabDescription").classList.toggle("hidden",button.dataset.detailTab!=="description");document.getElementById("detailTabDelivery").classList.toggle("hidden",button.dataset.detailTab!=="delivery")});
+  document.querySelectorAll("[data-detail-tab]").forEach(button=>button.onclick=()=>{document.querySelectorAll("[data-detail-tab]").forEach(b=>b.classList.toggle("active",b===button));document.querySelectorAll(".detail-tab-panel").forEach(panel=>panel.classList.toggle("hidden",panel.id!==`detailTab${button.dataset.detailTab[0].toUpperCase()}${button.dataset.detailTab.slice(1)}`))});
   const mainImg = document.getElementById("detailMainImg");
   const zoomModal = document.getElementById("imageZoomModal");
   const zoomImg = document.getElementById("zoomImage");
