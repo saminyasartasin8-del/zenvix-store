@@ -91,6 +91,7 @@ end $$;
 
 alter table public.product_images add column if not exists url text;
 alter table public.product_images add column if not exists sort_order integer not null default 0;
+alter table public.product_images add column if not exists media_type text not null default 'image';
 alter table public.product_images add column if not exists created_at timestamptz not null default now();
 
 create or replace function public.is_zenvix_admin()
