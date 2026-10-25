@@ -274,6 +274,8 @@ async function renderDetail(){
           <img id="detailMainImg" src="${mediaList[0]?.type==="image"?mediaList[0].url:img}" alt="${product.name || "Product"}" onerror="this.src='https://placehold.co/900x700/f4f5f7/17202a?text=Product+Image'" ${mediaList[0]?.type==="video"?"hidden":""}>
           <video id="detailMainVideo" class="detail-product-video" controls preload="metadata" playsinline ${mediaList[0]?.type==="video"?"":"hidden"}></video>
           <span class="zoom-hint" id="productZoomHint" ${mediaList[0]?.type==="video"?"hidden":""}>⌕ Tap to zoom</span>
+          ${mediaList.length>1?`<button type="button" class="gallery-nav gallery-prev" id="galleryPrev" aria-label="Previous product photo or video">‹</button><button type="button" class="gallery-nav gallery-next" id="galleryNext" aria-label="Next product photo or video">›</button>`:""}
+          <button type="button" class="video-gallery-open" id="openVideoViewer" aria-label="Open video gallery" ${mediaList[0]?.type==="video"?"":"hidden"}>⛶</button>
         </div>
         ${mediaList.length > 1 ? `<div class="product-thumbnails" id="productThumbnails" aria-label="Product photos and videos">${mediaList.map((media,index)=>`<button type="button" class="product-thumb ${index===0?"active":""}" data-media-index="${index}" aria-label="View product ${media.type} ${index+1}">${media.type==="video"?`<video src="${escapeHtml(media.url)}" muted preload="metadata"></video><span class="video-thumb-play">▶</span>`:`<img src="${escapeHtml(media.url)}" alt="${escapeHtml(product.name||"Product")} photo ${index+1}" onerror="this.style.display='none'">`}</button>`).join("")}</div>` : mediaList[0]?.type==="image" ? `<p class="gallery-note">Tap the image to zoom</p>` : ""}
       </div>      <div class="detail-info">
@@ -309,13 +311,14 @@ async function renderDetail(){
 
     <div class="image-zoom-modal" id="imageZoomModal" aria-hidden="true">
       <button type="button" class="zoom-close" id="zoomClose" aria-label="Close image">×</button>
-      <button type="button" class="zoom-nav zoom-prev" id="zoomPrev" aria-label="Previous image">‹</button>
+      <button type="button" class="zoom-nav zoom-prev" id="zoomPrev" aria-label="Previous photo or video">‹</button>
 
       <div class="zoom-stage" id="zoomStage">
         <img id="zoomImage" src="${img}" alt="${product.name || "Product"} enlarged">
+        <video id="zoomVideo" controls playsinline preload="metadata" hidden></video>
       </div>
 
-      <button type="button" class="zoom-nav zoom-next" id="zoomNext" aria-label="Next image">›</button>
+      <button type="button" class="zoom-nav zoom-next" id="zoomNext" aria-label="Next photo or video">›</button>
 
       <div class="zoom-controls">
         <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
@@ -323,7 +326,7 @@ async function renderDetail(){
         <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
       </div>
 
-      <p class="zoom-caption">Use +/− to zoom • Swipe to change image</p>
+      <p class="zoom-caption">Use +/− to zoom • Swipe through photos and video</p>
     </div>
   `;
 
@@ -331,6 +334,7 @@ async function renderDetail(){
   const mainImg = document.getElementById("detailMainImg");
   const zoomModal = document.getElementById("imageZoomModal");
   const zoomImg = document.getElementById("zoomImage");
+  const zoomVideo = document.getElementById("zoomVideo");
 
   let activeImageIndex = 0;
   let activeMediaIndex = 0;
@@ -365,37 +369,45 @@ async function renderDetail(){
   const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const pointerMidpoint = (a, b) => ({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
 
-  const setProductImage = index => {
-    activeImageIndex=(index+imageList.length)%imageList.length;
-    mainImg.src=imageList[activeImageIndex];zoomImg.src=imageList[activeImageIndex];
-    zoomScale=1;panX=0;panY=0;applyZoomTransform();
+  const showViewerMedia = () => {
+    const media=mediaList[activeMediaIndex];
+    zoomScale=1;panX=0;panY=0;
+    const controls=document.querySelector(".zoom-controls");
+    if(media.type==="video"){
+      zoomImg.hidden=true;zoomVideo.hidden=false;zoomVideo.src=media.url;zoomVideo.load();if(controls)controls.hidden=true;zoomStage.classList.remove("zoomed");zoomVideo.play().catch(()=>{});
+    }else{
+      zoomVideo.pause();zoomVideo.removeAttribute("src");zoomVideo.load();zoomVideo.hidden=true;zoomImg.hidden=false;zoomImg.src=media.url;if(controls)controls.hidden=false;applyZoomTransform();
+    }
   };
   const setProductMedia = index => {
     activeMediaIndex=(index+mediaList.length)%mediaList.length;
     const media=mediaList[activeMediaIndex];
     document.querySelectorAll(".product-thumb").forEach(button=>button.classList.toggle("active",Number(button.dataset.mediaIndex)===activeMediaIndex));
-    const hint=document.getElementById("productZoomHint");
+    const hint=document.getElementById("productZoomHint");const openVideoButton=document.getElementById("openVideoViewer");
     if(media.type==="video"){
-      mainImg.hidden=true;mainVideo.hidden=false;mainVideo.src=media.url;mainVideo.load();if(hint)hint.hidden=true;
+      mainImg.hidden=true;mainVideo.hidden=false;mainVideo.src=media.url;mainVideo.load();if(hint)hint.hidden=true;if(openVideoButton)openVideoButton.hidden=false;
     }else{
-      mainVideo.pause();mainVideo.removeAttribute("src");mainVideo.load();mainVideo.hidden=true;mainImg.hidden=false;if(hint)hint.hidden=false;setProductImage(imageList.indexOf(media.url));
+      mainVideo.pause();mainVideo.removeAttribute("src");mainVideo.load();mainVideo.hidden=true;mainImg.hidden=false;mainImg.src=media.url;if(hint)hint.hidden=false;if(openVideoButton)openVideoButton.hidden=true;activeImageIndex=imageList.indexOf(media.url);
     }
+    if(zoomModal.classList.contains("open"))showViewerMedia();
   };
+  const openGalleryViewer = () => {zoomModal.classList.add("open");zoomModal.setAttribute("aria-hidden","false");document.body.classList.add("zoom-open");showViewerMedia()};
   document.querySelectorAll(".product-thumb").forEach(button=>button.addEventListener("click",()=>setProductMedia(Number(button.dataset.mediaIndex))));
+  document.getElementById("galleryPrev")?.addEventListener("click",()=>setProductMedia(activeMediaIndex-1));
+  document.getElementById("galleryNext")?.addEventListener("click",()=>setProductMedia(activeMediaIndex+1));
+  document.getElementById("openVideoViewer")?.addEventListener("click",openGalleryViewer);
   setProductMedia(0);
 
   const closeZoom = () => {
     zoomModal.classList.remove("open");
     zoomModal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("zoom-open");
+    zoomVideo.pause();zoomVideo.removeAttribute("src");zoomVideo.load();zoomVideo.hidden=true;zoomImg.hidden=false;
   };
 
-  document.getElementById("mainProductImage").addEventListener("click", () => {
-    if(mediaList[activeMediaIndex]?.type!=="image")return;
-    setProductImage(imageList.indexOf(mediaList[activeMediaIndex].url));
-    zoomModal.classList.add("open");
-    zoomModal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("zoom-open");
+  document.getElementById("mainProductImage").addEventListener("click", event => {
+    if(event.target.closest("button"))return;
+    if(mediaList[activeMediaIndex]?.type==="image")openGalleryViewer();
   });
 
   document.getElementById("zoomClose").addEventListener("click", closeZoom);
@@ -404,13 +416,8 @@ async function renderDetail(){
     if (event.target === zoomModal) closeZoom();
   });
 
-  document.getElementById("zoomPrev").addEventListener("click", () => {
-    setProductImage(activeImageIndex - 1);
-  });
-
-  document.getElementById("zoomNext").addEventListener("click", () => {
-    setProductImage(activeImageIndex + 1);
-  });
+  document.getElementById("zoomPrev").addEventListener("click",()=>setProductMedia(activeMediaIndex-1));
+  document.getElementById("zoomNext").addEventListener("click",()=>setProductMedia(activeMediaIndex+1));
 
   const applyZoom = (delta) => {
     zoomScale = Math.max(1, Math.min(4, zoomScale + delta));
@@ -420,8 +427,13 @@ async function renderDetail(){
 
   document.getElementById("zoomIn").addEventListener("click", () => applyZoom(0.25));
   document.getElementById("zoomOut").addEventListener("click", () => applyZoom(-0.25));
+  let videoSwipeStartX=null;
+  zoomVideo.addEventListener("touchstart",event=>{videoSwipeStartX=event.touches.length===1?event.touches[0].clientX:null},{passive:true});
+  zoomVideo.addEventListener("touchend",event=>{if(videoSwipeStartX===null)return;const delta=event.changedTouches[0].clientX-videoSwipeStartX;videoSwipeStartX=null;if(Math.abs(delta)>60)setProductMedia(activeMediaIndex+(delta<0?1:-1))},{passive:true});
 
   zoomStage.addEventListener("pointerdown", event => {
+    if(mediaList[activeMediaIndex]?.type==="video")return;
+    if(mediaList[activeMediaIndex]?.type==="video")return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     event.preventDefault();
     zoomStage.setPointerCapture(event.pointerId);
@@ -467,7 +479,7 @@ async function renderDetail(){
     const endX = event.clientX;
     zoomPointers.delete(event.pointerId);
     if (wasSinglePointer && start && !start.zoomed && zoomScale === 1 && Math.abs(endX-start.x)>55) {
-      setProductImage(activeImageIndex + (endX < start.x ? 1 : -1));
+      setProductMedia(activeMediaIndex + (endX < start.x ? 1 : -1));
     }
     if (zoomPointers.size >= 2) {
       const [a,b] = [...zoomPointers.values()];
