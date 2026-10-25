@@ -948,9 +948,8 @@ async function renderAdmin(){
         placeholder="Image URL"
       >
       
-<label class="wide">Upload Product Images (একাধিক ছবি নির্বাচন করতে পারবে)
-  <input type="file" name="images" accept="image/*" multiple>
-</label>
+<label class="wide">Upload Product Images (প্রতিটি ছবির জন্য আলাদা ফিল্ড; + চাপলে নতুন ছবি যোগ হবে)</label>
+<div id="productImageInputs" class="wide"><div class="image-upload-row"><input type="file" name="images" accept="image/*" aria-label="Product photo 1"><button type="button" class="add-image-input" aria-label="Add another photo">+</button><button type="button" class="remove-image-input" aria-label="Remove photo" hidden>×</button></div></div>
 <label class="wide">Upload Product Videos (MP4/WebM, max 30 MB each)
   <input type="file" name="videos" accept="video/mp4,video/webm" multiple>
 </label>
@@ -1047,7 +1046,13 @@ async function renderAdmin(){
     </div>
   `;
 
-  document.getElementById("cancelProductEdit").onclick=resetProductForm;window.adminProducts=p;
+  document.getElementById("productImageInputs").addEventListener("click",event=>{
+    const row=event.target.closest(".image-upload-row");
+    if(event.target.closest(".add-image-input")){
+      const next=document.createElement("div");next.className="image-upload-row";next.innerHTML='<input type="file" name="images" accept="image/*" aria-label="Additional product photo"><button type="button" class="add-image-input" aria-label="Add another photo">+</button><button type="button" class="remove-image-input" aria-label="Remove photo">×</button>';
+      row.after(next);
+    }else if(event.target.closest(".remove-image-input")){row.remove()}
+  });  document.getElementById("cancelProductEdit").onclick=resetProductForm;window.adminProducts=p;
   attachBusinessKoroImporter();
   document.getElementById("productForm").onsubmit = async event => {
     event.preventDefault();
@@ -1334,7 +1339,7 @@ if (imageRows.length > 0 && (!productId || replaceImages)) {
   };
 }
 
-function resetProductForm(){const f=document.getElementById("productForm");if(!f)return;f.reset();f.elements.productId.value="";f.elements.img.placeholder="Image URL";document.getElementById("productFormTitle").textContent="Add a product";f.querySelector('button[type="submit"]').textContent="Add product";document.getElementById("cancelProductEdit").hidden=true;document.getElementById("removeImagesLabel").hidden=true}
+function resetProductForm(){const f=document.getElementById("productForm");if(!f)return;f.reset();document.querySelectorAll("#productImageInputs .image-upload-row:not(:first-child)").forEach(row=>row.remove());f.elements.productId.value="";f.elements.img.placeholder="Image URL";document.getElementById("productFormTitle").textContent="Add a product";f.querySelector('button[type="submit"]').textContent="Add product";document.getElementById("cancelProductEdit").hidden=true;document.getElementById("removeImagesLabel").hidden=true}
 async function setProductPosition(id,requestedPosition){const list=[...(window.adminProducts||[])];const from=list.findIndex(item=>String(item.id)===String(id));const position=Math.max(1,Math.min(list.length,Math.trunc(Number(requestedPosition)||0)));if(from<0||!position){showToast("Enter a valid position number.");return}const [product]=list.splice(from,1);list.splice(position-1,0,product);const results=await Promise.all(list.map((item,index)=>supabaseClient.from("products").update({sort_order:index}).eq("id",item.id)));const failed=results.find(result=>result.error);if(failed){console.error("Product ordering failed:",failed.error);showToast("Could not save product order. Run the updated Supabase SQL, then retry.");return}showToast("Product moved to position "+position+" ✓");await renderAdmin()}
 function editProduct(id){const p=(window.adminProducts||[]).find(x=>String(x.id)===String(id));if(!p)return;const f=document.getElementById("productForm");f.elements.productId.value=p.id;f.elements.name.value=p.name||"";f.elements.brand.value=p.brand||"";f.elements.cat.value=p.cat||"Other";f.elements.price.value=p.price||"";f.elements.old.value=p.old||"";f.elements.stock.value=p.stock||0;f.elements.img.value="";f.elements.img.placeholder="Leave blank to keep existing photos";f.elements.badge.value=p.badge||"";f.elements.featured.value=String(!!p.featured);f.elements.description.value=p.description||p.desc||"";f.elements.specifications.value=p.specifications||"";f.elements.features.value=p.features||"";document.getElementById("removeImagesLabel").hidden=!(p.images?.length||p.videos?.length||p.img);document.getElementById("productFormTitle").textContent="Edit product";f.querySelector('button[type="submit"]').textContent="Save changes";document.getElementById("cancelProductEdit").hidden=false;f.scrollIntoView({behavior:"smooth",block:"center"})}
 function productStoragePath(url,productId){try{const parsed=new URL(url);const marker="/storage/v1/object/public/product-images/";const index=parsed.pathname.indexOf(marker);if(index<0)return null;const path=decodeURIComponent(parsed.pathname.slice(index+marker.length));return path.startsWith(`${productId}/`)?path:null}catch{return null}}
